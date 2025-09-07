@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep:*)",
+      "Bash(python -m pytest Google_Drive/tests/test_drive_watcher.py::TestGoogleDriveWatcher::test_watch_for_changes -v)",
+      "Bash(python3 -m pytest Google_Drive/tests/test_drive_watcher.py::TestGoogleDriveWatcher::test_watch_for_changes -v)",
+      "Bash(ls:*)",
+      "Bash(source:*)",
+      "Bash(./venv/Scripts/activate.bat)",
+      "Bash(PYTHONPATH=/mnt/c/Users/colem/dynamous/6_Agent_Deployment/backend_rag_pipeline python3 -c \"import sys; print('Python path:', sys.path); import Google_Drive.drive_watcher; print('Import successful')\")",
+      "Bash(python -m pytest Google_Drive/tests/test_drive_watcher.py::TestGoogleDriveWatcher::test_check_for_changes_initial_scan -v)",
+      "Bash(find:*)",
+      "Bash(python -m pytest -v)",
+      "Bash(python -m pytest tests/test_docker_entrypoint.py -v)",
+      "Bash(python -m pytest tests/test_docker_entrypoint.py::TestDockerEntrypoint::test_main_continuous_mode_local tests/test_docker_entrypoint.py::TestDockerEntrypoint::test_main_continuous_mode_google_drive -v)",
+      "Bash(python -m pytest tests/test_docker_entrypoint.py -k \"not continuous\" -v)",
+      "Bash(python -m pytest Google_Drive/tests/ tests/test_db_handler.py tests/test_text_processor.py -v --tb=short)",
+      "Bash(timeout 30s python -m pytest:*)",
+      "Bash(python -m pytest -v --tb=short)",
+      "Bash(python -m pytest Google_Drive/tests/test_drive_watcher.py::TestGoogleDriveWatcher::test_check_for_changes_with_errors -v -s)",
+      "Bash(python -m pytest Google_Drive/tests/test_drive_watcher.py::TestGoogleDriveWatcher::test_check_for_changes_with_errors Local_Files/tests/test_file_watcher.py::TestLocalFileWatcher::test_check_for_changes_with_errors -v)",
+      "Bash(python -m pytest Google_Drive/tests/test_drive_watcher.py::TestGoogleDriveWatcher::test_load_config_invalid_date Google_Drive/tests/test_drive_watcher.py::TestGoogleDriveWatcher::test_save_last_check_time_error Google_Drive/tests/test_drive_watcher.py::TestGoogleDriveWatcher::test_check_for_changes_with_deleted_files Local_Files/tests/test_file_watcher.py::TestLocalFileWatcher::test_load_config_invalid_date Local_Files/tests/test_file_watcher.py::TestLocalFileWatcher::test_save_last_check_time_error Local_Files/tests/test_file_watcher.py::TestLocalFileWatcher::test_check_for_changes_with_deleted_files -v)",
+      "Bash(python -m pytest Google_Drive/tests/test_drive_watcher.py::TestGoogleDriveWatcher::test_check_for_changes_with_deleted_files Local_Files/tests/test_file_watcher.py::TestLocalFileWatcher::test_check_for_changes_with_deleted_files -v)",
+      "Bash(python -m pytest --tb=no -q)",
+      "Bash(python -m pytest common/test_state_manager.py -v)",
+      "Bash(python -m pytest tests/test_docker_entrypoint.py::TestDockerEntrypoint::test_main_single_run_success -v)",
+      "Bash(python3 -m pytest tests/test_docker_entrypoint.py::TestDockerEntrypoint::test_main_single_run_success -v)",
+      "Bash(mv:*)",
+      "Bash(npm install:*)",
+      "Bash(mkdir:*)",
+      "Bash(npm run test:*)"
+    ],
+    "deny": []
+  }
+}
