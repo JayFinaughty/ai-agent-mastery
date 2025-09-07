@@ -16,7 +16,8 @@ Create a comprehensive PRP that enables **one-pass implementation success** thro
 
 ## Research Process
 
-- Start by invoking the codebase-analysis subagent if this is a new feature or bugfix in an existing project, then read the markdown file it produces in the PRPs/planning folder
+- Start by invoking the codebase-analysis subagent if this is a new feature or bugfix in an existing project, then read the markdown file it produces in the PRPs/planning folder.
+- When invoking the codebase analysis subagent, prompt it to research the codebase for the specific feature being implemented.
 
 > During the research process, create clear tasks and spawn as many agents and subagents as needed using the batch tools. The deeper research we do here the better the PRP will be. we optminize for chance of success and not for speed.
 
@@ -77,7 +78,7 @@ After research completion, create comprehensive PRP writing plan using TodoWrite
 
 ## Output
 
-Save as: `PRPs/{feature-name}.md`
+Save as: `PRPs/{feature-name}.md` (avoid calling it INITIAL.md)
 
 ## PRP Quality Gates
 
