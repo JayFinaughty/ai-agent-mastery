@@ -8,7 +8,6 @@ Create a comprehensive PRP that enables **one-pass implementation success** thro
 
 **Critical Understanding**: The executing AI agent only receives:
 
-- Start by reading and understanding the prp concepts PRPs/README.md
 - The PRP content you create
 - Its training data knowledge
 - Access to codebase files (but needs guidance on which ones)
@@ -16,6 +15,8 @@ Create a comprehensive PRP that enables **one-pass implementation success** thro
 **Therefore**: Your research and context curation directly determines implementation success. Incomplete context = implementation failure.
 
 ## Research Process
+
+- Start by invoking the codebase-analysis subagent if this is a new feature or bugfix in an existing project, then read the markdown file it produces in the planning folder
 
 > During the research process, create clear tasks and spawn as many agents and subagents as needed using the batch tools. The deeper research we do here the better the PRP will be. we optminize for chance of success and not for speed.
 
