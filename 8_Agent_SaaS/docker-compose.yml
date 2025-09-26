@@ -26,6 +26,9 @@ services:
       # Web Search Configuration
       - BRAVE_API_KEY=${BRAVE_API_KEY}
       - SEARXNG_BASE_URL=${SEARXNG_BASE_URL}
+      # Stripe Configuration
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
       # Agent Observability Configuration (optional)
       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
@@ -75,6 +78,7 @@ services:
         VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
         VITE_AGENT_ENDPOINT: ${VITE_AGENT_ENDPOINT:-http://agent-api:8001/api/pydantic-agent}
         VITE_ENABLE_STREAMING: ${VITE_ENABLE_STREAMING:-true}
+        VITE_STRIPE_PUBLISHABLE_KEY: ${VITE_STRIPE_PUBLISHABLE_KEY}
         VITE_LANGFUSE_HOST_WITH_PROJECT: ${VITE_LANGFUSE_HOST_WITH_PROJECT}
     container_name: dynamous-frontend
     restart: always

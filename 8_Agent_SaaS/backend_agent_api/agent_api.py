@@ -34,6 +34,18 @@ from db_utils import (
     store_request
 )
 
+# Import Stripe and token utilities
+from stripe_utils import (
+    create_payment_intent as stripe_create_payment_intent,
+    verify_webhook_signature,
+    PRICING_TIERS
+)
+from token_utils import (
+    check_user_tokens,
+    deduct_token_atomic,
+    grant_tokens_atomic
+)
+
 from pydantic_ai import Agent, BinaryContent
 # Import all the message part classes from Pydantic AI
 from pydantic_ai.messages import (
@@ -162,6 +174,15 @@ class AgentRequest(BaseModel):
     session_id: str
     files: Optional[List[FileAttachment]] = None
 
+class TokenPurchaseRequest(BaseModel):
+    tier: str
+    user_id: str
+
+class PaymentIntentResponse(BaseModel):
+    client_secret: str
+    amount: int
+    currency: str = "usd"
+
 
 # Add this helper function to your backend code
 async def stream_error_response(error_message: str, session_id: str):
@@ -187,6 +208,118 @@ async def stream_error_response(error_message: str, session_id: str):
     }
     yield json.dumps(final_data).encode('utf-8') + b'\n'
 
+@app.post("/api/create-payment-intent")
+async def create_payment_intent(
+    request: TokenPurchaseRequest,
+    user: Dict[str, Any] = Depends(verify_token)
+) -> PaymentIntentResponse:
+    """
+    Create a Stripe payment intent for token purchase.
+
+    Args:
+        request: Token purchase request with tier and user_id
+        user: Authenticated user from verify_token dependency
+
+    Returns:
+        PaymentIntentResponse with client_secret for frontend
+
+    Raises:
+        HTTPException: If user mismatch or Stripe error
+    """
+    if request.user_id != user.get("id"):
+        raise HTTPException(
+            status_code=401,
+            detail="User ID mismatch"
+        )
+
+    try:
+        result = await stripe_create_payment_intent(request.tier, request.user_id)
+        return PaymentIntentResponse(**result)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create payment intent: {str(e)}"
+        )
+
+@app.post("/api/webhook/stripe")
+async def stripe_webhook(request: Request):
+    """
+    Handle Stripe webhook events for payment processing.
+
+    Args:
+        request: FastAPI Request object with raw body
+
+    Returns:
+        Success response (always returns 200 to acknowledge webhook)
+
+    Note:
+        MUST use raw body for signature verification
+        Returns 200 even on errors (after logging) to prevent retries
+    """
+    try:
+        payload = (await request.body()).decode('utf-8')
+        sig_header = request.headers.get("stripe-signature")
+
+        if not sig_header:
+            print("Warning: No Stripe signature header found")
+            return {"success": False, "error": "No signature"}
+
+        event = verify_webhook_signature(payload, sig_header)
+
+        if event['type'] == 'payment_intent.succeeded':
+            payment_intent = event['data']['object']
+            metadata = payment_intent.get('metadata', {})
+
+            user_id = metadata.get('user_id')
+            tier = metadata.get('tier')
+            event_id = event['id']
+            payment_intent_id = payment_intent['id']
+
+            if not user_id or not tier:
+                print(
+                    f"Warning: Missing metadata in payment intent "
+                    f"{payment_intent_id}"
+                )
+                return {"success": False, "error": "Missing metadata"}
+
+            _, token_count = PRICING_TIERS.get(tier, (0, 0))
+            if token_count == 0:
+                print(f"Warning: Invalid tier {tier}")
+                return {"success": False, "error": "Invalid tier"}
+
+            success = await grant_tokens_atomic(
+                supabase,
+                user_id,
+                token_count,
+                event_id,
+                payment_intent_id
+            )
+
+            if success:
+                print(
+                    f"Successfully granted {token_count} tokens to user "
+                    f"{user_id}"
+                )
+            else:
+                print(
+                    f"Failed to grant tokens to user {user_id} "
+                    f"(may be duplicate event)"
+                )
+
+        return {"success": True}
+
+    except HTTPException as e:
+        print(f"Webhook validation error: {e.detail}")
+        return {"success": False, "error": e.detail}
+
+    except Exception as e:
+        print(f"Webhook processing error: {str(e)}")
+        return {"success": False, "error": str(e)}
+
 @app.post("/api/pydantic-agent")
 async def pydantic_agent(request: AgentRequest, user: Dict[str, Any] = Depends(verify_token)):
     # Verify that the user ID in the request matches the user ID from the token
@@ -204,7 +337,29 @@ async def pydantic_agent(request: AgentRequest, user: Dict[str, Any] = Depends(v
                 stream_error_response("Rate limit exceeded. Please try again later.", request.session_id),
                 media_type='text/plain'
             )
-        
+
+        # Check user has sufficient tokens
+        user_tokens = await check_user_tokens(supabase, request.user_id)
+        if user_tokens < 1:
+            return StreamingResponse(
+                stream_error_response(
+                    "Insufficient tokens. Please purchase more tokens to continue.",
+                    request.session_id
+                ),
+                media_type='text/plain'
+            )
+
+        # Deduct token atomically
+        token_deducted = await deduct_token_atomic(supabase, request.user_id)
+        if not token_deducted:
+            return StreamingResponse(
+                stream_error_response(
+                    "Failed to deduct token. Please try again.",
+                    request.session_id
+                ),
+                media_type='text/plain'
+            )
+
         # Start request tracking in parallel
         request_tracking_task = asyncio.create_task(
             store_request(supabase, request.request_id, request.user_id, request.query)

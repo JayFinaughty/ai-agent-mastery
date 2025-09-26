@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { MessageList } from '@/components/chat/MessageList';
 import { ChatInput } from '@/components/chat/ChatInput';
 import { ChatSidebar } from '@/components/sidebar/ChatSidebar';
+import TokenBalance from '@/components/tokens/TokenBalance';
 import { AlertCircle, Menu } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Message, Conversation } from '@/types/database.types';
@@ -91,6 +92,11 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
 
   const renderChatContent = () => (
     <div className="flex-1 flex flex-col overflow-hidden w-full">
+      {!isMobile && (
+        <div className="flex items-center justify-end h-14 border-b px-4">
+          <TokenBalance />
+        </div>
+      )}
       <main className="flex-1 flex flex-col overflow-hidden">
         {error && (
           <Alert variant="destructive" className="m-4">
@@ -127,21 +133,24 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   if (isMobile) {
     return (
       <div className="flex h-screen bg-background flex-col overflow-hidden">
-        <div className="flex items-center h-14 border-b px-4">
-          <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="mr-2">
-                <Menu className="h-5 w-5" />
-                <span className="sr-only">Open sidebar</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="p-0 w-[280px]" showCloseButton={false}>
-              {renderSidebar()}
+        <div className="flex items-center justify-between h-14 border-b px-4">
+          <div className="flex items-center">
+            <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="mr-2">
+                  <Menu className="h-5 w-5" />
+                  <span className="sr-only">Open sidebar</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="p-0 w-[280px]" showCloseButton={false}>
+                {renderSidebar()}
             </SheetContent>
           </Sheet>
           <div className="font-semibold">
             {selectedConversation?.title || "New Chat"}
           </div>
+          </div>
+          <TokenBalance />
         </div>
         {renderChatContent()}
       </div>

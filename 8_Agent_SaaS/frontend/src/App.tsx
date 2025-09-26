@@ -10,8 +10,18 @@ import Chat from "./pages/Chat";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 import { AuthCallback } from "./components/auth/AuthCallback";
+import PurchaseTokens from "./pages/PurchaseTokens";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import PaymentFailure from "./pages/PaymentFailure";
+import TokenHistory from "./pages/TokenHistory";
 import { ThemeProvider } from "@/components/theme-provider";
 import { useEffect } from "react";
+import { Elements } from "@stripe/react-stripe-js";
+import { loadStripe } from "@stripe/stripe-js";
+
+const stripePromise = loadStripe(
+  import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || ''
+);
 
 const queryClient = new QueryClient();
 
@@ -53,13 +63,38 @@ const AppRoutes = () => {
           </ProtectedRoute>
         } 
       />
-      <Route 
-        path="/admin" 
+      <Route
+        path="/admin"
         element={
           <ProtectedRoute>
             <Admin />
           </ProtectedRoute>
-        } 
+        }
+      />
+      <Route
+        path="/purchase-tokens"
+        element={
+          <ProtectedRoute>
+            <PurchaseTokens />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/payment-success"
+        element={
+          <Elements stripe={stripePromise}>
+            <PaymentSuccess />
+          </Elements>
+        }
+      />
+      <Route path="/payment-failure" element={<PaymentFailure />} />
+      <Route
+        path="/token-history"
+        element={
+          <ProtectedRoute>
+            <TokenHistory />
+          </ProtectedRoute>
+        }
       />
       {/* OAuth callback route for handling authentication redirects */}
       <Route path="/auth/callback" element={<AuthCallback />} />

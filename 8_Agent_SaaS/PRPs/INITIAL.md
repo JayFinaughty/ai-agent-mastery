@@ -2,6 +2,8 @@
 
 This current agentic application has no payment integration and I want to build that in with Stripe. Changes will need to be made for both the backend and frontend.
 
+We want a PRP between 500 and 1000 lines and between 15-20 tasks in total.
+
 ## Frontend (frontend/ is the folder)
 We will need to implement:
 - Page to view purchase options for agent tokens and purchase them
@@ -44,6 +46,7 @@ We will need to implement:
 - Implement proper Stripe signature verification for webhook security
 - Include idempotency handling to prevent duplicate token grants if webhooks are retried
 - Keep the implementation simple but effective - we're building for a dev environment initially
+- Be sure to update the .env.example at the top level of the repo, the docker-compose.yml, and the Dockerfile for the frontend
 
 ## Environment Variables Needed
 ### Backend

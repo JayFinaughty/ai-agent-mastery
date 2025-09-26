@@ -38,7 +38,10 @@ BEGIN
             'Only admins can change admin status',
             'Users can update their own profile',
             'Users can view their own profile',
-            'Deny delete for user_profiles'
+            'Deny delete for user_profiles',
+            'Users can view their own transactions',
+            'Admins can view all transactions',
+            'Deny delete for transactions'
         )
     LOOP
         EXECUTE format('DROP POLICY IF EXISTS %I ON %I.%I', 
@@ -76,6 +79,8 @@ DROP FUNCTION IF EXISTS public.is_admin();
 DROP FUNCTION IF EXISTS match_documents(vector, int, jsonb);
 DROP FUNCTION IF EXISTS execute_custom_sql(text);
 DROP FUNCTION IF EXISTS update_rag_pipeline_state_updated_at();
+DROP FUNCTION IF EXISTS deduct_token_if_sufficient(UUID);
+DROP FUNCTION IF EXISTS grant_tokens_for_purchase(UUID, INTEGER, TEXT, TEXT);
 
 -- Drop tables (in reverse dependency order) - CASCADE will handle dependencies
 DROP TABLE IF EXISTS document_rows CASCADE;
@@ -83,6 +88,7 @@ DROP TABLE IF EXISTS documents CASCADE;
 DROP TABLE IF EXISTS document_metadata CASCADE;
 DROP TABLE IF EXISTS messages CASCADE;
 DROP TABLE IF EXISTS conversations CASCADE;
+DROP TABLE IF EXISTS transactions CASCADE;
 DROP TABLE IF EXISTS requests CASCADE;
 DROP TABLE IF EXISTS user_profiles CASCADE;
 DROP TABLE IF EXISTS rag_pipeline_state CASCADE;
@@ -97,6 +103,7 @@ CREATE TABLE user_profiles (
     email TEXT NOT NULL,
     full_name TEXT,
     is_admin BOOLEAN DEFAULT FALSE,
+    tokens INTEGER DEFAULT 0 NOT NULL CHECK (tokens >= 0),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
@@ -173,6 +180,21 @@ CREATE TABLE rag_pipeline_state (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
+-- 9. Transactions Table (Token Purchase Audit Trail)
+CREATE TABLE transactions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
+    transaction_type TEXT NOT NULL CHECK (transaction_type IN ('purchase', 'consumption')),
+    token_amount INTEGER NOT NULL,
+    stripe_event_id TEXT,
+    stripe_payment_intent_id TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE UNIQUE INDEX idx_transactions_stripe_event_id
+ON transactions(stripe_event_id)
+WHERE stripe_event_id IS NOT NULL;
+
 -- ==============================================================================
 -- CREATE INDEXES
 -- ==============================================================================
@@ -185,6 +207,10 @@ CREATE INDEX idx_messages_computed_session ON messages(computed_session_user_id)
 -- RAG pipeline state indexes
 CREATE INDEX idx_rag_pipeline_state_pipeline_type ON rag_pipeline_state(pipeline_type);
 CREATE INDEX idx_rag_pipeline_state_last_run ON rag_pipeline_state(last_run);
+
+-- Transaction indexes
+CREATE INDEX idx_transactions_user_id ON transactions(user_id);
+CREATE INDEX idx_transactions_created_at ON transactions(created_at DESC);
 
 -- ==============================================================================
 -- CREATE FUNCTIONS
@@ -272,6 +298,92 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
+-- 6. Atomic Token Deduction Function
+CREATE OR REPLACE FUNCTION deduct_token_if_sufficient(p_user_id UUID)
+RETURNS TABLE(success BOOLEAN, remaining_tokens INTEGER, error_message TEXT)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    current_tokens INTEGER;
+BEGIN
+    SELECT tokens INTO current_tokens
+    FROM user_profiles
+    WHERE id = p_user_id
+    FOR UPDATE;
+
+    IF current_tokens IS NULL THEN
+        RETURN QUERY SELECT FALSE, 0, 'User not found'::TEXT;
+        RETURN;
+    END IF;
+
+    IF current_tokens < 1 THEN
+        RETURN QUERY SELECT FALSE, current_tokens, 'Insufficient tokens'::TEXT;
+        RETURN;
+    END IF;
+
+    UPDATE user_profiles
+    SET tokens = tokens - 1
+    WHERE id = p_user_id;
+
+    INSERT INTO transactions (user_id, transaction_type, token_amount)
+    VALUES (p_user_id, 'consumption', -1);
+
+    RETURN QUERY SELECT TRUE, current_tokens - 1, NULL::TEXT;
+END;
+$$;
+
+-- 7. Atomic Token Grant Function
+CREATE OR REPLACE FUNCTION grant_tokens_for_purchase(
+    p_user_id UUID,
+    p_tokens INTEGER,
+    p_event_id TEXT,
+    p_payment_intent_id TEXT
+)
+RETURNS TABLE(success BOOLEAN, new_balance INTEGER, error_message TEXT)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    current_balance INTEGER;
+    event_exists BOOLEAN;
+BEGIN
+    SELECT EXISTS(
+        SELECT 1 FROM transactions WHERE stripe_event_id = p_event_id
+    ) INTO event_exists;
+
+    IF event_exists THEN
+        SELECT tokens INTO current_balance FROM user_profiles WHERE id = p_user_id;
+        RETURN QUERY SELECT FALSE, current_balance, 'Event already processed'::TEXT;
+        RETURN;
+    END IF;
+
+    UPDATE user_profiles
+    SET tokens = tokens + p_tokens
+    WHERE id = p_user_id
+    RETURNING tokens INTO current_balance;
+
+    IF current_balance IS NULL THEN
+        RETURN QUERY SELECT FALSE, 0, 'User not found'::TEXT;
+        RETURN;
+    END IF;
+
+    INSERT INTO transactions (
+        user_id,
+        transaction_type,
+        token_amount,
+        stripe_event_id,
+        stripe_payment_intent_id
+    ) VALUES (
+        p_user_id,
+        'purchase',
+        p_tokens,
+        p_event_id,
+        p_payment_intent_id
+    );
+
+    RETURN QUERY SELECT TRUE, current_balance, NULL::TEXT;
+END;
+$$;
+
 -- ==============================================================================
 -- CREATE TRIGGERS
 -- ==============================================================================
@@ -296,6 +408,7 @@ ALTER TABLE requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE rag_pipeline_state ENABLE ROW LEVEL SECURITY;
+ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
 
 -- ==============================================================================
 -- CREATE ROW LEVEL SECURITY POLICIES
@@ -418,6 +531,19 @@ ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Deny all access to document_metadata" ON document_metadata FOR ALL USING (false);
 CREATE POLICY "Deny all access to document_rows" ON document_rows FOR ALL USING (false);
 CREATE POLICY "Deny all access to documents" ON documents FOR ALL USING (false);
+
+-- Transaction Policies
+CREATE POLICY "Users can view their own transactions"
+ON transactions
+FOR SELECT
+USING (auth.uid() = user_id);
+
+CREATE POLICY "Admins can view all transactions"
+ON transactions
+FOR SELECT
+USING (is_admin());
+
+CREATE POLICY "Deny delete for transactions" ON transactions FOR DELETE USING (false);
 
 -- ==============================================================================
 -- REVOKE PERMISSIONS

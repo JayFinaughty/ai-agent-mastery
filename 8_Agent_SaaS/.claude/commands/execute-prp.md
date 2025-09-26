@@ -17,20 +17,20 @@ PRPs enable working code on the first attempt through:
 1. **Load PRP**
    - Read the specified PRP file completely
    - Absorb all context, patterns, requirements and gather codebase intelligence
-   - Use the provided documentation references and file patterns, consume the right documentation before the appropriate todo/task
+   - Use the provided documentation references and file patterns, consume the right documentation before the appropriate task
    - Trust the PRP's context and guidance - it's designed for one-pass success
    - If needed do additional codebase exploration and research as needed
 
 2. **ULTRATHINK & Plan**
    - Create comprehensive implementation plan following the PRP's task order
-   - Break down into clear todos using TodoWrite tool
-   - Use subagents for parallel work when beneficial (always create prp inspired prompts for subagents when used)
+   - Break down into clear tasks and make them in Archon
    - Follow the patterns referenced in the PRP
+   - Be sure to update each task in Archon as you work on it and complete it
    - Use specific file paths, class names, and method signatures from PRP context
    - Never guess - always verify the codebase patterns and examples referenced in the PRP yourself
 
 3. **Execute Implementation**
-   - Follow the PRP's Implementation Tasks sequence, add more detail as needed, especially when using subagents
+   - Follow the PRP's Implementation Tasks sequence in Archon, add more detail as needed, especially when using subagents
    - Use the patterns and examples referenced in the PRP
    - Create files in locations specified by the desired codebase tree
    - Apply naming conventions from the task specifications and CLAUDE.md
