@@ -13,8 +13,6 @@ import sys
 import os
 import re
 
-embedding_model = os.getenv('EMBEDDING_MODEL_CHOICE') or 'text-embedding-3-small'
-
 async def brave_web_search(query: str, http_client: AsyncClient, brave_api_key: str) -> str:
     """
     Helper function for web_search_tool - searches the web with the Brave API
@@ -107,6 +105,7 @@ async def web_search_tool(query: str, http_client: AsyncClient, brave_api_key: s
 
 async def get_embedding(text: str, embedding_client: AsyncOpenAI) -> List[float]:
     """Get embedding vector from OpenAI."""
+    embedding_model = os.getenv('EMBEDDING_MODEL_CHOICE') or 'text-embedding-3-small'
     try:
         response = await embedding_client.embeddings.create(
             model=embedding_model,
