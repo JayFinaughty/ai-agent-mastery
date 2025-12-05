@@ -65,7 +65,7 @@ pip install pydantic-evals
 - Traces of actual user interactions
 - Human annotation workflows
 - Feedback collection from users
-- Comparison across agent versions
+- Quality tracking over time
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -97,7 +97,6 @@ pip install pydantic-evals
 - Manual annotation workflow
 - Automated scoring on production traces
 - User feedback widget (thumbs up/down)
-- A/B testing for prompt iterations
 
 ---
 
@@ -115,7 +114,6 @@ pip install pydantic-evals
 | 8 | **Production LLM Judge** | Production | `module-8-07-llm-judge-prod` |
 | 9 | **Span & Trace Analysis** | Production | `module-8-08-span-trace` |
 | 10 | **User Feedback Collection** | Production | `module-8-09-user-feedback` |
-| 11 | **A/B Testing Agent Versions** | Both | `module-8-10-ab-testing` |
 
 ---
 
@@ -247,8 +245,7 @@ Overall: 2/2 passed (100%)
 Move to Langfuse when you have:
 - [ ] Real users interacting with your agent
 - [ ] Need for human expert review
-- [ ] Want to track quality over time
-- [ ] Need to compare agent versions (A/B testing)
+- [ ] Want to track quality trends over time
 
 ### Langfuse Capabilities
 
@@ -258,7 +255,6 @@ Move to Langfuse when you have:
 | **Manual Annotation** | Expert review via web UI |
 | **Scores** | Attach quality scores to traces |
 | **Datasets** | Manage test cases in Langfuse |
-| **Experiments** | Compare agent versions |
 
 ### Production Strategies
 
@@ -269,7 +265,8 @@ Move to Langfuse when you have:
 | LLM Judge (Prod) | Quality at scale | When manual review doesn't scale |
 | Span/Trace | Execution correctness | Debugging, tool call validation |
 | User Feedback | Satisfaction | Once you have real users |
-| A/B Testing | Version comparison | Before deploying changes |
+
+> **Note on A/B Testing:** Comparing agent versions (different prompts, models, or configurations) is valuable but adds complexity. Langfuse supports experiments for this use case. We recommend mastering the core strategies above first, then exploring A/B testing as needed. See [08_AB_COMPARATIVE_TESTING.md](./08_AB_COMPARATIVE_TESTING.md) for details.
 
 ---
 
@@ -291,6 +288,10 @@ Detailed implementation plans for each strategy:
 | — | Span/Trace | [07_SPAN_TRACE_BASED.md](./07_SPAN_TRACE_BASED.md) |
 | — | User Feedback | [01_USER_FEEDBACK.md](./01_USER_FEEDBACK.md) |
 | — | Implicit Feedback | [02_IMPLICIT_FEEDBACK.md](./02_IMPLICIT_FEEDBACK.md) |
+
+### Advanced (Honorable Mention)
+| # | Strategy | Document |
+|---|----------|----------|
 | — | A/B Testing | [08_AB_COMPARATIVE_TESTING.md](./08_AB_COMPARATIVE_TESTING.md) |
 
 ### Overview
