@@ -277,7 +277,7 @@ Detailed implementation plans for each strategy:
 ### Local Phase
 | # | Strategy | Document |
 |---|----------|----------|
-| — | Golden Dataset | [06_GOLDEN_DATASET.md](./06_GOLDEN_DATASET.md) |
+| — | Golden Dataset | [01_GOLDEN_DATASET.md](./01_GOLDEN_DATASET.md) |
 | — | Rule-Based (Local) | [05_RULE_BASED.md](./05_RULE_BASED.md) |
 | — | LLM Judge (Local) | [04_MODEL_BASED_LLM_JUDGE.md](./04_MODEL_BASED_LLM_JUDGE.md) |
 

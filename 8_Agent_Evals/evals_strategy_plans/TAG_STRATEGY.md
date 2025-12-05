@@ -91,7 +91,7 @@ git checkout module-8-prep-evals
 | Video # | Video Title | Tag | Strategy Doc |
 |---------|-------------|-----|--------------|
 | 1 | Introduction to Agent Evals | — (no code) | INDEX.md |
-| 2 | Golden Dataset | `module-8-01-golden-dataset` | 06_GOLDEN_DATASET.md |
+| 2 | Golden Dataset | `module-8-01-golden-dataset` | 01_GOLDEN_DATASET.md |
 | 3 | Rule-Based Evals (Local) | `module-8-02-rule-based-local` | 05_RULE_BASED.md |
 | 4 | LLM-as-Judge (Local) | `module-8-03-llm-judge-local` | 04_MODEL_BASED_LLM_JUDGE.md |
 | 5 | Introduction to Langfuse | `module-8-04-langfuse-setup` | — |
@@ -152,15 +152,15 @@ git checkout module-8-prep-evals
 
 ## Strategy Documents Reference
 
-The strategy documents provide conceptual depth for each evaluation approach. They're numbered by their original category, not implementation order:
+Strategy documents are being renumbered to match implementation order. Current mapping:
 
-| Doc # | Strategy | Used In Videos |
-|-------|----------|----------------|
-| 01 | User Feedback | Video 10 |
-| 02 | Implicit Feedback | (Mentioned, not core) |
-| 03 | Manual Annotation | Video 6 |
-| 04 | LLM Judge | Videos 4, 8 |
-| 05 | Rule-Based | Videos 3, 7 |
-| 06 | Golden Dataset | Video 2 |
-| 07 | Span/Trace | Video 9 |
-| 08 | A/B Testing | (Honorable mention) |
+| File | Strategy | Used In Videos |
+|------|----------|----------------|
+| 01_GOLDEN_DATASET.md | Golden Dataset | Video 2 |
+| 02_IMPLICIT_FEEDBACK.md | Implicit Feedback | (Mentioned, not core) |
+| 03_MANUAL_ANNOTATION.md | Manual Annotation | Video 6 |
+| 04_MODEL_BASED_LLM_JUDGE.md | LLM Judge | Videos 4, 8 |
+| 05_RULE_BASED.md | Rule-Based | Videos 3, 7 |
+| 07_SPAN_TRACE_BASED.md | Span/Trace | Video 9 |
+| 08_AB_COMPARATIVE_TESTING.md | A/B Testing | (Honorable mention) |
+| 01_USER_FEEDBACK.md | User Feedback | Video 10 |
