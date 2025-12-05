@@ -288,7 +288,7 @@ Detailed implementation plans for each strategy:
 | — | Rule-Based (Prod) | [06_RULE_BASED_PROD.md](./06_RULE_BASED_PROD.md) |
 | — | LLM Judge (Prod) | [07_LLM_JUDGE_PROD.md](./07_LLM_JUDGE_PROD.md) |
 | — | Span/Trace | [08_SPAN_TRACE.md](./08_SPAN_TRACE.md) |
-| — | User Feedback | [01_USER_FEEDBACK.md](./01_USER_FEEDBACK.md) |
+| — | User Feedback | [09_USER_FEEDBACK.md](./09_USER_FEEDBACK.md) |
 | — | Implicit Feedback | [02_IMPLICIT_FEEDBACK.md](./02_IMPLICIT_FEEDBACK.md) |
 
 ### Advanced (Honorable Mention)
