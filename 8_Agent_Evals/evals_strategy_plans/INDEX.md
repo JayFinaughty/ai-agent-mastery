@@ -289,12 +289,13 @@ Detailed implementation plans for each strategy:
 | — | LLM Judge (Prod) | [07_LLM_JUDGE_PROD.md](./07_LLM_JUDGE_PROD.md) |
 | — | Span/Trace | [08_SPAN_TRACE.md](./08_SPAN_TRACE.md) |
 | — | User Feedback | [09_USER_FEEDBACK.md](./09_USER_FEEDBACK.md) |
-| — | Implicit Feedback | [02_IMPLICIT_FEEDBACK.md](./02_IMPLICIT_FEEDBACK.md) |
+| — | Implicit Feedback | [honorable_mention_implicit_feedback.md](./honorable_mention_implicit_feedback.md) |
 
 ### Advanced (Honorable Mention)
 | # | Strategy | Document |
 |---|----------|----------|
-| — | A/B Testing | [08_AB_COMPARATIVE_TESTING.md](./08_AB_COMPARATIVE_TESTING.md) |
+| — | A/B Testing | [honorable_mention_ab_testing.md](./honorable_mention_ab_testing.md) |
+| — | Cost/Efficiency | [honorable_mention_cost_efficiency.md](./honorable_mention_cost_efficiency.md) |
 
 ### Overview
 | Document | Purpose |

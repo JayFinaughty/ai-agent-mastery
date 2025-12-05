@@ -82,7 +82,8 @@ This mirrors how a real team adopts evaluations: start simple, add complexity as
 | Strategy | Status | Notes |
 |----------|--------|-------|
 | **Implicit Feedback** | Mentioned | Behavioral analysis, app DB only |
-| **A/B Testing** | Honorable mention | See [08_AB_COMPARATIVE_TESTING.md](./08_AB_COMPARATIVE_TESTING.md) |
+| **A/B Testing** | Honorable mention | See [honorable_mention_ab_testing.md](./honorable_mention_ab_testing.md) |
+| **Cost/Efficiency** | Honorable mention | See [honorable_mention_cost_efficiency.md](./honorable_mention_cost_efficiency.md) |
 
 ---
 
@@ -190,7 +191,7 @@ Detailed implementation plans for each strategy:
 | File | Strategy | Phase |
 |------|----------|-------|
 | [09_USER_FEEDBACK.md](./09_USER_FEEDBACK.md) | User Feedback | Production |
-| [02_IMPLICIT_FEEDBACK.md](./02_IMPLICIT_FEEDBACK.md) | Implicit Feedback | (Reference) |
+| [honorable_mention_implicit_feedback.md](./honorable_mention_implicit_feedback.md) | Implicit Feedback | (Reference) |
 | [05_MANUAL_ANNOTATION.md](./05_MANUAL_ANNOTATION.md) | Manual Annotation | Production |
 | [03_LLM_JUDGE_LOCAL.md](./03_LLM_JUDGE_LOCAL.md) | LLM Judge (Local) | Local |
 | [07_LLM_JUDGE_PROD.md](./07_LLM_JUDGE_PROD.md) | LLM Judge (Prod) | Production |
@@ -198,7 +199,8 @@ Detailed implementation plans for each strategy:
 | [06_RULE_BASED_PROD.md](./06_RULE_BASED_PROD.md) | Rule-Based (Prod) | Production |
 | [01_GOLDEN_DATASET.md](./01_GOLDEN_DATASET.md) | Golden Dataset | Local |
 | [08_SPAN_TRACE.md](./08_SPAN_TRACE.md) | Span/Trace | Production |
-| [08_AB_COMPARATIVE_TESTING.md](./08_AB_COMPARATIVE_TESTING.md) | A/B Testing | (Honorable Mention) |
+| [honorable_mention_ab_testing.md](./honorable_mention_ab_testing.md) | A/B Testing | (Honorable Mention) |
+| [honorable_mention_cost_efficiency.md](./honorable_mention_cost_efficiency.md) | Cost/Efficiency | (Honorable Mention) |
 
 ---
 

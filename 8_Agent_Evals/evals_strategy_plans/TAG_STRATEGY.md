@@ -164,5 +164,6 @@ Strategy documents are numbered to match implementation order where applicable:
 | 07_LLM_JUDGE_PROD.md | LLM Judge (Prod) | Video 8 |
 | 08_SPAN_TRACE.md | Span/Trace | Video 9 |
 | 09_USER_FEEDBACK.md | User Feedback | Video 10 |
-| 02_IMPLICIT_FEEDBACK.md | Implicit Feedback | (Mentioned, not core) |
-| 08_AB_COMPARATIVE_TESTING.md | A/B Testing | (Honorable mention) |
+| honorable_mention_implicit_feedback.md | Implicit Feedback | (Mentioned, not core) |
+| honorable_mention_ab_testing.md | A/B Testing | (Honorable mention) |
+| honorable_mention_cost_efficiency.md | Cost/Efficiency | (Honorable mention) |
