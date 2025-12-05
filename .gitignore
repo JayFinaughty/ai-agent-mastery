@@ -22,3 +22,4 @@ infra/terraform.tfvars
 .terraform
 .terraform*
 .langgraph_api
+.claude/commands/module_8
