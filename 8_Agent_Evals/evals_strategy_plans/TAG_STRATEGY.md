@@ -95,7 +95,7 @@ git checkout module-8-prep-evals
 | 3 | Rule-Based Evals (Local) | `module-8-02-rule-based-local` | 02_RULE_BASED_LOCAL.md |
 | 4 | LLM-as-Judge (Local) | `module-8-03-llm-judge-local` | 03_LLM_JUDGE_LOCAL.md |
 | 5 | Introduction to Langfuse | `module-8-04-langfuse-setup` | — |
-| 6 | Manual Annotation | `module-8-05-manual-annotation` | 03_MANUAL_ANNOTATION.md |
+| 6 | Manual Annotation | `module-8-05-manual-annotation` | 05_MANUAL_ANNOTATION.md |
 | 7 | Production Rule-Based | `module-8-06-rule-based-prod` | 06_RULE_BASED_PROD.md |
 | 8 | Production LLM Judge | `module-8-07-llm-judge-prod` | 07_LLM_JUDGE_PROD.md |
 | 9 | Span & Trace Analysis | `module-8-08-span-trace` | 07_SPAN_TRACE_BASED.md |
@@ -159,7 +159,7 @@ Strategy documents are numbered to match implementation order where applicable:
 | 01_GOLDEN_DATASET.md | Golden Dataset | Video 2 |
 | 02_RULE_BASED_LOCAL.md | Rule-Based (Local) | Video 3 |
 | 03_LLM_JUDGE_LOCAL.md | LLM Judge (Local) | Video 4 |
-| 03_MANUAL_ANNOTATION.md | Manual Annotation | Video 6 |
+| 05_MANUAL_ANNOTATION.md | Manual Annotation | Video 6 |
 | 06_RULE_BASED_PROD.md | Rule-Based (Prod) | Video 7 |
 | 07_LLM_JUDGE_PROD.md | LLM Judge (Prod) | Video 8 |
 | 07_SPAN_TRACE_BASED.md | Span/Trace | Video 9 |

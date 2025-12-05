@@ -191,7 +191,7 @@ Detailed implementation plans for each strategy:
 |------|----------|-------|
 | [01_USER_FEEDBACK.md](./01_USER_FEEDBACK.md) | User Feedback | Production |
 | [02_IMPLICIT_FEEDBACK.md](./02_IMPLICIT_FEEDBACK.md) | Implicit Feedback | (Reference) |
-| [03_MANUAL_ANNOTATION.md](./03_MANUAL_ANNOTATION.md) | Manual Annotation | Production |
+| [05_MANUAL_ANNOTATION.md](./05_MANUAL_ANNOTATION.md) | Manual Annotation | Production |
 | [03_LLM_JUDGE_LOCAL.md](./03_LLM_JUDGE_LOCAL.md) | LLM Judge (Local) | Local |
 | [07_LLM_JUDGE_PROD.md](./07_LLM_JUDGE_PROD.md) | LLM Judge (Prod) | Production |
 | [02_RULE_BASED_LOCAL.md](./02_RULE_BASED_LOCAL.md) | Rule-Based (Local) | Local |

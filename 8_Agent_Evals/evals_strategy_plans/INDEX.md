@@ -284,7 +284,7 @@ Detailed implementation plans for each strategy:
 ### Production Phase
 | # | Strategy | Document |
 |---|----------|----------|
-| — | Manual Annotation | [03_MANUAL_ANNOTATION.md](./03_MANUAL_ANNOTATION.md) |
+| — | Manual Annotation | [05_MANUAL_ANNOTATION.md](./05_MANUAL_ANNOTATION.md) |
 | — | Rule-Based (Prod) | [06_RULE_BASED_PROD.md](./06_RULE_BASED_PROD.md) |
 | — | LLM Judge (Prod) | [07_LLM_JUDGE_PROD.md](./07_LLM_JUDGE_PROD.md) |
 | — | Span/Trace | [07_SPAN_TRACE_BASED.md](./07_SPAN_TRACE_BASED.md) |
