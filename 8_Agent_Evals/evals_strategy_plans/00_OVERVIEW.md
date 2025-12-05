@@ -197,7 +197,7 @@ Detailed implementation plans for each strategy:
 | [02_RULE_BASED_LOCAL.md](./02_RULE_BASED_LOCAL.md) | Rule-Based (Local) | Local |
 | [06_RULE_BASED_PROD.md](./06_RULE_BASED_PROD.md) | Rule-Based (Prod) | Production |
 | [01_GOLDEN_DATASET.md](./01_GOLDEN_DATASET.md) | Golden Dataset | Local |
-| [07_SPAN_TRACE_BASED.md](./07_SPAN_TRACE_BASED.md) | Span/Trace | Production |
+| [08_SPAN_TRACE.md](./08_SPAN_TRACE.md) | Span/Trace | Production |
 | [08_AB_COMPARATIVE_TESTING.md](./08_AB_COMPARATIVE_TESTING.md) | A/B Testing | (Honorable Mention) |
 
 ---

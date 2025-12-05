@@ -287,7 +287,7 @@ Detailed implementation plans for each strategy:
 | — | Manual Annotation | [05_MANUAL_ANNOTATION.md](./05_MANUAL_ANNOTATION.md) |
 | — | Rule-Based (Prod) | [06_RULE_BASED_PROD.md](./06_RULE_BASED_PROD.md) |
 | — | LLM Judge (Prod) | [07_LLM_JUDGE_PROD.md](./07_LLM_JUDGE_PROD.md) |
-| — | Span/Trace | [07_SPAN_TRACE_BASED.md](./07_SPAN_TRACE_BASED.md) |
+| — | Span/Trace | [08_SPAN_TRACE.md](./08_SPAN_TRACE.md) |
 | — | User Feedback | [01_USER_FEEDBACK.md](./01_USER_FEEDBACK.md) |
 | — | Implicit Feedback | [02_IMPLICIT_FEEDBACK.md](./02_IMPLICIT_FEEDBACK.md) |
 

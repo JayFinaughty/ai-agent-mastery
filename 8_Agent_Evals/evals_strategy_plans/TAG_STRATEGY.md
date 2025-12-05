@@ -98,7 +98,7 @@ git checkout module-8-prep-evals
 | 6 | Manual Annotation | `module-8-05-manual-annotation` | 05_MANUAL_ANNOTATION.md |
 | 7 | Production Rule-Based | `module-8-06-rule-based-prod` | 06_RULE_BASED_PROD.md |
 | 8 | Production LLM Judge | `module-8-07-llm-judge-prod` | 07_LLM_JUDGE_PROD.md |
-| 9 | Span & Trace Analysis | `module-8-08-span-trace` | 07_SPAN_TRACE_BASED.md |
+| 9 | Span & Trace Analysis | `module-8-08-span-trace` | 08_SPAN_TRACE.md |
 | 10 | User Feedback | `module-8-09-user-feedback` | 01_USER_FEEDBACK.md |
 
 ---
@@ -162,7 +162,7 @@ Strategy documents are numbered to match implementation order where applicable:
 | 05_MANUAL_ANNOTATION.md | Manual Annotation | Video 6 |
 | 06_RULE_BASED_PROD.md | Rule-Based (Prod) | Video 7 |
 | 07_LLM_JUDGE_PROD.md | LLM Judge (Prod) | Video 8 |
-| 07_SPAN_TRACE_BASED.md | Span/Trace | Video 9 |
+| 08_SPAN_TRACE.md | Span/Trace | Video 9 |
 | 01_USER_FEEDBACK.md | User Feedback | Video 10 |
 | 02_IMPLICIT_FEEDBACK.md | Implicit Feedback | (Mentioned, not core) |
 | 08_AB_COMPARATIVE_TESTING.md | A/B Testing | (Honorable mention) |
