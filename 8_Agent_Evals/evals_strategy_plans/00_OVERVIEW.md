@@ -193,7 +193,8 @@ Detailed implementation plans for each strategy:
 | [02_IMPLICIT_FEEDBACK.md](./02_IMPLICIT_FEEDBACK.md) | Implicit Feedback | (Reference) |
 | [03_MANUAL_ANNOTATION.md](./03_MANUAL_ANNOTATION.md) | Manual Annotation | Production |
 | [04_MODEL_BASED_LLM_JUDGE.md](./04_MODEL_BASED_LLM_JUDGE.md) | LLM Judge | Local + Production |
-| [05_RULE_BASED.md](./05_RULE_BASED.md) | Rule-Based | Local + Production |
+| [02_RULE_BASED_LOCAL.md](./02_RULE_BASED_LOCAL.md) | Rule-Based (Local) | Local |
+| [06_RULE_BASED_PROD.md](./06_RULE_BASED_PROD.md) | Rule-Based (Prod) | Production |
 | [01_GOLDEN_DATASET.md](./01_GOLDEN_DATASET.md) | Golden Dataset | Local |
 | [07_SPAN_TRACE_BASED.md](./07_SPAN_TRACE_BASED.md) | Span/Trace | Production |
 | [08_AB_COMPARATIVE_TESTING.md](./08_AB_COMPARATIVE_TESTING.md) | A/B Testing | (Honorable Mention) |

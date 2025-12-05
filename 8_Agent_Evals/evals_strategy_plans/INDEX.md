@@ -278,13 +278,14 @@ Detailed implementation plans for each strategy:
 | # | Strategy | Document |
 |---|----------|----------|
 | — | Golden Dataset | [01_GOLDEN_DATASET.md](./01_GOLDEN_DATASET.md) |
-| — | Rule-Based (Local) | [05_RULE_BASED.md](./05_RULE_BASED.md) |
+| — | Rule-Based (Local) | [02_RULE_BASED_LOCAL.md](./02_RULE_BASED_LOCAL.md) |
 | — | LLM Judge (Local) | [04_MODEL_BASED_LLM_JUDGE.md](./04_MODEL_BASED_LLM_JUDGE.md) |
 
 ### Production Phase
 | # | Strategy | Document |
 |---|----------|----------|
 | — | Manual Annotation | [03_MANUAL_ANNOTATION.md](./03_MANUAL_ANNOTATION.md) |
+| — | Rule-Based (Prod) | [06_RULE_BASED_PROD.md](./06_RULE_BASED_PROD.md) |
 | — | Span/Trace | [07_SPAN_TRACE_BASED.md](./07_SPAN_TRACE_BASED.md) |
 | — | User Feedback | [01_USER_FEEDBACK.md](./01_USER_FEEDBACK.md) |
 | — | Implicit Feedback | [02_IMPLICIT_FEEDBACK.md](./02_IMPLICIT_FEEDBACK.md) |

@@ -92,11 +92,11 @@ git checkout module-8-prep-evals
 |---------|-------------|-----|--------------|
 | 1 | Introduction to Agent Evals | — (no code) | INDEX.md |
 | 2 | Golden Dataset | `module-8-01-golden-dataset` | 01_GOLDEN_DATASET.md |
-| 3 | Rule-Based Evals (Local) | `module-8-02-rule-based-local` | 05_RULE_BASED.md |
+| 3 | Rule-Based Evals (Local) | `module-8-02-rule-based-local` | 02_RULE_BASED_LOCAL.md |
 | 4 | LLM-as-Judge (Local) | `module-8-03-llm-judge-local` | 04_MODEL_BASED_LLM_JUDGE.md |
 | 5 | Introduction to Langfuse | `module-8-04-langfuse-setup` | — |
 | 6 | Manual Annotation | `module-8-05-manual-annotation` | 03_MANUAL_ANNOTATION.md |
-| 7 | Production Rule-Based | `module-8-06-rule-based-prod` | 05_RULE_BASED.md |
+| 7 | Production Rule-Based | `module-8-06-rule-based-prod` | 06_RULE_BASED_PROD.md |
 | 8 | Production LLM Judge | `module-8-07-llm-judge-prod` | 04_MODEL_BASED_LLM_JUDGE.md |
 | 9 | Span & Trace Analysis | `module-8-08-span-trace` | 07_SPAN_TRACE_BASED.md |
 | 10 | User Feedback | `module-8-09-user-feedback` | 01_USER_FEEDBACK.md |
@@ -152,15 +152,16 @@ git checkout module-8-prep-evals
 
 ## Strategy Documents Reference
 
-Strategy documents are being renumbered to match implementation order. Current mapping:
+Strategy documents are numbered to match implementation order where applicable:
 
 | File | Strategy | Used In Videos |
 |------|----------|----------------|
 | 01_GOLDEN_DATASET.md | Golden Dataset | Video 2 |
+| 02_RULE_BASED_LOCAL.md | Rule-Based (Local) | Video 3 |
 | 02_IMPLICIT_FEEDBACK.md | Implicit Feedback | (Mentioned, not core) |
 | 03_MANUAL_ANNOTATION.md | Manual Annotation | Video 6 |
 | 04_MODEL_BASED_LLM_JUDGE.md | LLM Judge | Videos 4, 8 |
-| 05_RULE_BASED.md | Rule-Based | Videos 3, 7 |
+| 06_RULE_BASED_PROD.md | Rule-Based (Prod) | Video 7 |
 | 07_SPAN_TRACE_BASED.md | Span/Trace | Video 9 |
 | 08_AB_COMPARATIVE_TESTING.md | A/B Testing | (Honorable mention) |
 | 01_USER_FEEDBACK.md | User Feedback | Video 10 |
