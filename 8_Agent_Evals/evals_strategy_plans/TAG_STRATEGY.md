@@ -2,64 +2,73 @@
 
 ## Overview
 
-Each evaluation strategy is implemented as a sequential commit on the `module-8-prep-evals` branch. After each implementation, create a tag to mark that state of the codebase. This allows easy checkout of any intermediate state for video recording.
+Tags mark the codebase state after each video's implementation. The tag number matches the video number (minus the intro), making it easy to checkout the exact state shown in any video.
+
+**Key Principle:** Implementation order = Teaching order = Tag order
 
 ## Tag Naming Convention
 
 ```
-module-8-{number}-{strategy-name}
+module-8-{number}-{feature-name}
 ```
 
-The number corresponds to the strategy number (1-8), not the implementation order.
+Tags are numbered sequentially by implementation/teaching order:
 
-Examples:
-
-- `module-8-01-user-feedback`
-- `module-8-05-rule-based`
-- `module-8-07-span-trace`
+- `module-8-01-golden-dataset`
+- `module-8-02-rule-based-local`
+- `module-8-03-llm-judge-local`
+- etc.
 
 ## Implementation Order
 
-Follow the phased approach from `00_OVERVIEW.md` for practical dependency reasons:
+### Phase 1: Local Development Evals (Pydantic AI)
 
-| Phase                        | Strategy              | Tag                             | Rationale                            |
-| ---------------------------- | --------------------- | ------------------------------- | ------------------------------------ |
-| **Phase 1: Foundation**      |                       |                                 |                                      |
-| 1.1                          | Rule-Based (5)        | `module-8-05-rule-based`        | Safety gates required for production |
-| 1.2                          | Span/Trace (7)        | `module-8-07-span-trace`        | Instrumentation enables all analysis |
-| **Phase 2: Automated Evals** |                       |                                 |                                      |
-| 2.1                          | Golden Dataset (6)    | `module-8-06-golden-dataset`    | Regression testing baseline          |
-| 2.2                          | LLM Judge (4)         | `module-8-04-llm-judge`         | Quality scoring                      |
-| **Phase 3: Human-in-Loop**   |                       |                                 |                                      |
-| 3.1                          | User Feedback (1)     | `module-8-01-user-feedback`     | Frontend integration                 |
-| 3.2                          | Implicit Feedback (2) | `module-8-02-implicit-feedback` | Behavioral tracking                  |
-| 3.3                          | Manual Annotation (3) | `module-8-03-manual-annotation` | Expert review workflow               |
-| **Phase 4: Optimization**    |                       |                                 |                                      |
-| 4.1                          | A/B Testing (8)       | `module-8-08-ab-testing`        | Version comparison                   |
+No external services. Simple Python scripts with `pydantic-evals`.
 
-> **Note:** Tags are cumulative. Each tag includes all previously implemented strategies, regardless of their number.
+| Order | Feature | Tag | What's Added |
+|-------|---------|-----|--------------|
+| 1 | Golden Dataset | `module-8-01-golden-dataset` | YAML test cases, evaluation runner |
+| 2 | Rule-Based (Local) | `module-8-02-rule-based-local` | Deterministic checks (Contains, tool calls) |
+| 3 | LLM Judge (Local) | `module-8-03-llm-judge-local` | LLMJudge evaluator with rubrics |
+
+### Phase 2: Production Evals (Langfuse)
+
+Real user data, tracing, and observability.
+
+| Order | Feature | Tag | What's Added |
+|-------|---------|-----|--------------|
+| 4 | Langfuse Setup | `module-8-04-langfuse-setup` | Tracing integration, score sync |
+| 5 | Manual Annotation | `module-8-05-manual-annotation` | Annotation workflow, Langfuse UI |
+| 6 | Rule-Based (Prod) | `module-8-06-rule-based-prod` | Score sync to Langfuse, alerts |
+| 7 | LLM Judge (Prod) | `module-8-07-llm-judge-prod` | Langfuse built-in judge, async scoring |
+| 8 | Span/Trace | `module-8-08-span-trace` | Trace-based evaluation, tool flow analysis |
+| 9 | User Feedback | `module-8-09-user-feedback` | Frontend widget, feedback scores |
+
+> **Note:** Tags are cumulative. Each tag includes all previous implementations.
+
+---
 
 ## Workflow
 
-### Implementing Each Strategy
+### Implementing Each Feature
 
 ```bash
 # Ensure you're on the prep branch
 git checkout module-8-prep-evals
 
-# Implement strategy N
+# Implement feature N
 # ... make code changes ...
 
 # Commit
 git add -A
-git commit -m "Implement Strategy N: {Strategy Name}"
+git commit -m "Implement Video N: {Feature Name}"
 
-# Tag this state (use strategy number, not implementation order)
-git tag module-8-0N-{strategy-name}
+# Tag this state
+git tag module-8-0N-{feature-name}
 
 # Push commit and tag
 git push origin module-8-prep-evals
-git push origin module-8-0N-{strategy-name}
+git push origin module-8-0N-{feature-name}
 ```
 
 ### Checking Out a Specific State
@@ -69,31 +78,32 @@ git push origin module-8-0N-{strategy-name}
 git tag -l "module-8-*"
 
 # Checkout specific state (detached HEAD)
-git checkout module-8-05-rule-based
+git checkout module-8-03-llm-judge-local
 
 # Return to latest
 git checkout module-8-prep-evals
 ```
 
-## Key Points
+---
 
-- Tags are numbered by **strategy number** (1-8), not implementation order
-- Each tag represents a **cumulative** state (includes all previously implemented strategies)
-- Commits are linear on a single branch
-- Tags are immutable snapshots
-- If fixes are needed in an earlier state, rebase and re-tag
+## Video to Tag Mapping
 
-## Recording Videos
-
-Videos can be recorded in any order. Checkout the appropriate tag for the strategy you're recording:
-
-```bash
-git checkout module-8-0N-{strategy}
-```
+| Video # | Video Title | Tag | Strategy Doc |
+|---------|-------------|-----|--------------|
+| 1 | Introduction to Agent Evals | — (no code) | INDEX.md |
+| 2 | Golden Dataset | `module-8-01-golden-dataset` | 06_GOLDEN_DATASET.md |
+| 3 | Rule-Based Evals (Local) | `module-8-02-rule-based-local` | 05_RULE_BASED.md |
+| 4 | LLM-as-Judge (Local) | `module-8-03-llm-judge-local` | 04_MODEL_BASED_LLM_JUDGE.md |
+| 5 | Introduction to Langfuse | `module-8-04-langfuse-setup` | — |
+| 6 | Manual Annotation | `module-8-05-manual-annotation` | 03_MANUAL_ANNOTATION.md |
+| 7 | Production Rule-Based | `module-8-06-rule-based-prod` | 05_RULE_BASED.md |
+| 8 | Production LLM Judge | `module-8-07-llm-judge-prod` | 04_MODEL_BASED_LLM_JUDGE.md |
+| 9 | Span & Trace Analysis | `module-8-08-span-trace` | 07_SPAN_TRACE_BASED.md |
+| 10 | User Feedback | `module-8-09-user-feedback` | 01_USER_FEEDBACK.md |
 
 ---
 
-## Instructor Guide: Swapping Between States
+## Instructor Guide: Recording Videos
 
 ### Before Recording
 
@@ -107,13 +117,14 @@ git tag -l "module-8-*"
 
 ### Switching to a Specific Video State
 
-**Example: Preparing to record Video for Rule-Based (Strategy 5)**
+**Example: Preparing to record Video 4 (LLM Judge Local)**
 
 ```bash
-# Switch to the Rule-Based state
-git checkout module-8-05-rule-based
+# Switch to the LLM Judge Local state
+git checkout module-8-03-llm-judge-local
 
 # You're now in "detached HEAD" state - this is normal
+# The codebase shows: Golden Dataset + Rule-Based + LLM Judge (all local)
 ```
 
 ### After Recording
@@ -125,13 +136,31 @@ git checkout module-8-prep-evals
 
 ### Quick Reference
 
-| Strategy              | Tag                             | Command                                      |
-| --------------------- | ------------------------------- | -------------------------------------------- |
-| 1 - User Feedback     | `module-8-01-user-feedback`     | `git checkout module-8-01-user-feedback`     |
-| 2 - Implicit Feedback | `module-8-02-implicit-feedback` | `git checkout module-8-02-implicit-feedback` |
-| 3 - Manual Annotation | `module-8-03-manual-annotation` | `git checkout module-8-03-manual-annotation` |
-| 4 - LLM Judge         | `module-8-04-llm-judge`         | `git checkout module-8-04-llm-judge`         |
-| 5 - Rule-Based        | `module-8-05-rule-based`        | `git checkout module-8-05-rule-based`        |
-| 6 - Golden Dataset    | `module-8-06-golden-dataset`    | `git checkout module-8-06-golden-dataset`    |
-| 7 - Span/Trace        | `module-8-07-span-trace`        | `git checkout module-8-07-span-trace`        |
-| 8 - A/B Testing       | `module-8-08-ab-testing`        | `git checkout module-8-08-ab-testing`        |
+| Video | Tag Command |
+|-------|-------------|
+| 2 - Golden Dataset | `git checkout module-8-01-golden-dataset` |
+| 3 - Rule-Based Local | `git checkout module-8-02-rule-based-local` |
+| 4 - LLM Judge Local | `git checkout module-8-03-llm-judge-local` |
+| 5 - Langfuse Setup | `git checkout module-8-04-langfuse-setup` |
+| 6 - Manual Annotation | `git checkout module-8-05-manual-annotation` |
+| 7 - Rule-Based Prod | `git checkout module-8-06-rule-based-prod` |
+| 8 - LLM Judge Prod | `git checkout module-8-07-llm-judge-prod` |
+| 9 - Span/Trace | `git checkout module-8-08-span-trace` |
+| 10 - User Feedback | `git checkout module-8-09-user-feedback` |
+
+---
+
+## Strategy Documents Reference
+
+The strategy documents provide conceptual depth for each evaluation approach. They're numbered by their original category, not implementation order:
+
+| Doc # | Strategy | Used In Videos |
+|-------|----------|----------------|
+| 01 | User Feedback | Video 10 |
+| 02 | Implicit Feedback | (Mentioned, not core) |
+| 03 | Manual Annotation | Video 6 |
+| 04 | LLM Judge | Videos 4, 8 |
+| 05 | Rule-Based | Videos 3, 7 |
+| 06 | Golden Dataset | Video 2 |
+| 07 | Span/Trace | Video 9 |
+| 08 | A/B Testing | (Honorable mention) |
