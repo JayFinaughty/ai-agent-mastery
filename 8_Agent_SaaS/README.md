@@ -1,17 +1,19 @@
-# Dynamous AI Agent Mastery - Module 6: AI Agent Deployment
+# Dynamous AI Agent Mastery - Module 8: AI Agent SaaS
 
-A modular, production-ready deployment setup for the Dynamous AI Agent Mastery agent and application. This module restructures the code from previous modules into independently deployable components: the AI agent API, RAG pipeline, and frontend application. Each component can be deployed, scaled, and maintained separately (or together!) while working together as a cohesive system.
+A production-ready AI agent application with Stripe payment integration for token-based billing. This module takes the agent deployment from previous modules and adds monetization capabilities, turning it into a complete SaaS product. Users purchase tokens via Stripe and consume them when interacting with the AI agent.
+
+The system includes independently deployable components: the AI agent API (with payment endpoints), RAG pipeline, and frontend application (with purchase flows). Each component can be deployed, scaled, and maintained separately while working together as a cohesive system.
 
 ## Modular Architecture
 
 The deployment structure has been designed for maximum flexibility and scalability:
 
 ```
-6_Agent_Deployment/
-├── backend_agent_api/      # AI Agent with FastAPI - The brain of the system
+8_Agent_SaaS/
+├── backend_agent_api/      # AI Agent with FastAPI + Stripe payment endpoints
 ├── backend_rag_pipeline/   # Document processing pipeline - Handles knowledge ingestion
-├── frontend/               # React application - User interface
-└── sql/                    # Database schemas - Foundation for all components
+├── frontend/               # React application with token purchase flows
+└── sql/                    # Database schemas including token billing tables
 ```
 
 Each component is self-contained with its own:
@@ -31,6 +33,7 @@ This modular approach allows you to:
 - Docker/Docker Desktop (recommended) OR Python 3.11+ and Node.js 18+ with npm
 - Supabase account (or self-hosted instance)
 - LLM provider account (OpenAI, OpenRouter, or local Ollama)
+- Stripe account for payment processing (https://stripe.com)
 - Optional: Brave API key for web search (or local SearXNG)
 - Optional: Google Drive API credentials for Google Drive RAG
 
@@ -44,17 +47,141 @@ The database is the foundation for all components. Set it up first:
 
 2. **Navigate to the SQL Editor** in your Supabase dashboard
 
-3. **Run the complete database setup:**
+3. **Run the database setup:**
+
+   **Option A - Fresh install (recommended):**
    ```sql
    -- Copy and paste the contents of sql/0-all-tables.sql
-   -- This creates all tables, functions, triggers, and security policies
+   -- This creates all tables INCLUDING token billing for Stripe
    ```
-   
-   **⚠️ Important**: The `0-all-tables.sql` script will DROP and recreate the agent tables (user_profiles, conversations, messages, documents, etc.). This resets the agent data to a blank slate - existing agent data will be lost, but other tables in your Supabase project remain untouched.
 
-**Alternative**: You can run the individual scripts (`1-user_profiles_requests.sql` through `9-rag_pipeline_state.sql`) if you prefer granular control.
+   **⚠️ Important**: The `0-all-tables.sql` script will DROP and recreate the agent tables. This resets the agent data to a blank slate.
 
-**Ollama Configuration**: For local Ollama implementations using models like nomic-embed-text, modify the vector dimensions from 1536 to 768 in `0-all-tables.sql` (lines 133 and 149).
+   **Option B - Upgrading from a previous module:**
+
+   If you already have the base agent tables from a previous module, just run the Stripe migrations:
+   ```sql
+   -- Run these scripts in order:
+   -- sql/10-stripe-tokens.sql      (adds tokens column to user_profiles)
+   -- sql/11-stripe-transactions.sql (transaction audit trail)
+   -- sql/12-stripe-tokens-rls.sql   (row level security)
+   -- sql/13-stripe-functions.sql    (atomic token operations)
+   -- sql/14-stripe-migration.sql    (grant tokens to existing users)
+   -- sql/15-enable-realtime.sql     (live balance updates in UI)
+   ```
+
+**Ollama Configuration**: For local Ollama with nomic-embed-text, modify the vector dimensions from 1536 to 768 in `0-all-tables.sql` (lines 133 and 149).
+
+## Stripe Setup
+
+Stripe powers the token billing system. Users purchase token packages and consume them when using the AI agent.
+
+<details>
+<summary><strong>Click to expand Stripe setup instructions</strong></summary>
+
+### How Token Billing Works
+
+- Users purchase token packages ($5/100, $10/250, $20/600 tokens)
+- Each AI agent request consumes 1 token
+- Real-time balance updates in the UI
+- Transaction history for audit trail
+
+### Install Stripe CLI (Required for Local Development)
+
+Stripe no longer allows `localhost` URLs in the dashboard for webhooks. You must use the Stripe CLI for local development.
+
+**macOS:**
+```bash
+brew install stripe/stripe-cli/stripe
+```
+
+**Windows:**
+```bash
+scoop bucket add stripe https://github.com/stripe/scoop-stripe-cli.git
+scoop install stripe
+```
+
+**Linux (Debian/Ubuntu):**
+```bash
+curl -s https://packages.stripe.dev/api/security/keypair/stripe-cli-gpg/public | gpg --dearmor | sudo tee /usr/share/keyrings/stripe.gpg
+echo "deb [signed-by=/usr/share/keyrings/stripe.gpg] https://packages.stripe.dev/stripe-cli-debian-local stable main" | sudo tee -a /etc/apt/sources.list.d/stripe.list
+sudo apt update && sudo apt install stripe
+```
+
+**Login to Stripe:**
+```bash
+stripe login
+```
+
+### Get API Keys
+
+1. Go to https://dashboard.stripe.com/apikeys
+2. Copy your **Publishable key** (`pk_test_...`) → Frontend `.env`
+3. Copy your **Secret key** (`sk_test_...`) → Backend `.env`
+
+### Start Webhook Forwarding (Local Development)
+
+1. **Start your backend API** on port 8001
+
+2. **In a separate terminal, start Stripe CLI:**
+   ```bash
+   stripe listen --forward-to localhost:8001/api/webhook/stripe
+   ```
+
+3. **Copy the webhook secret** from CLI output:
+   ```
+   > Ready! Your webhook signing secret is whsec_xxxxx
+   ```
+
+4. **Update backend `.env`** with the webhook secret and restart
+
+**Note:** Keep `stripe listen` running while testing. The secret changes each time you restart the CLI.
+
+### Test Cards
+
+| Scenario | Card Number |
+|----------|-------------|
+| Success | `4242 4242 4242 4242` |
+| Decline | `4000 0000 0000 0002` |
+| Auth Required | `4000 0025 0000 3155` |
+
+Use any future expiry date and any 3-digit CVC.
+
+### Test the Flow
+
+1. Login to frontend
+2. Navigate to `/purchase-tokens`
+3. Select a tier and use test card `4242424242424242`
+4. Watch the `stripe listen` terminal for webhook events
+5. Verify tokens added to account
+
+### Production Webhook Setup
+
+1. **Get live API keys** from Stripe Dashboard (toggle to Live mode)
+2. **Create webhook endpoint** in Stripe Dashboard → Developers → Webhooks:
+   - URL: `https://your-domain.com/api/webhook/stripe`
+   - Events: `payment_intent.succeeded`
+3. **Copy the webhook signing secret** (`whsec_...`)
+4. **Update environment variables** with live keys
+
+### Troubleshooting
+
+**Webhook signature fails:**
+- Verify `STRIPE_WEBHOOK_SECRET` matches CLI output (or dashboard secret for production)
+- Ensure backend is using raw request body for verification
+
+**Tokens not granted after payment:**
+- Check `stripe listen` terminal for `[200]` responses
+- Verify webhook is receiving `payment_intent.succeeded` events
+- Check backend logs for errors
+
+**Real-time balance updates not working:**
+- Ensure `sql/15-enable-realtime.sql` was run in Supabase
+- Check Supabase Dashboard → Database → Replication → `user_profiles` is enabled
+
+For complete setup documentation, see `PRPs/planning/stripe-setup.md`.
+
+</details>
 
 ## Deployment Methods
 
@@ -114,6 +241,10 @@ RAG_WATCH_FOLDER_ID=           # Specific Google Drive folder ID
 
 # Optional: Local Files Configuration  
 RAG_WATCH_DIRECTORY=           # Override container path (default: /app/Local_Files/data)
+
+# Stripe Configuration (Required for payments)
+STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key_here
+STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret_here  # Get from Stripe CLI
 
 # Optional Langfuse agent monitoring configuration
 LANGFUSE_PUBLIC_KEY=
@@ -396,6 +527,10 @@ SUPABASE_SERVICE_KEY=your_service_key
 BRAVE_API_KEY=your_brave_key
 SEARXNG_BASE_URL=http://localhost:8080
 
+# Stripe Configuration
+STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
+STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
+
 # RAG Pipeline Configuration
 RAG_PIPELINE_TYPE=local          # local or google_drive
 RUN_MODE=continuous              # continuous or single
@@ -415,6 +550,9 @@ VITE_SUPABASE_URL=your_supabase_url
 VITE_SUPABASE_ANON_KEY=your_anon_key
 VITE_AGENT_ENDPOINT=http://localhost:8001/api/pydantic-agent
 VITE_ENABLE_STREAMING=true
+
+# Stripe Configuration
+VITE_STRIPE_PUBLISHABLE_KEY=pk_test_your_publishable_key
 
 # Optional: LangFuse integration for admin dashboard
 VITE_LANGFUSE_HOST_WITH_PROJECT=http://localhost:3000/project/your-project-id
