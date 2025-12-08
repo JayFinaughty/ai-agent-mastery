@@ -117,6 +117,7 @@ async def grant_tokens_atomic(
         >>>     print("Tokens granted successfully")
     """
     try:
+        print(f"[grant_tokens_atomic] Calling RPC with user_id={user_id}, tokens={tokens}, event_id={event_id}")
         response = supabase.rpc(
             "grant_tokens_for_purchase",
             {
@@ -126,6 +127,9 @@ async def grant_tokens_atomic(
                 "p_payment_intent_id": payment_intent_id
             }
         ).execute()
+
+        print(f"[grant_tokens_atomic] RPC response data: {response.data}")
+        print(f"[grant_tokens_atomic] RPC response count: {response.count}")
 
         if response.data and len(response.data) > 0:
             result = response.data[0]
@@ -145,9 +149,13 @@ async def grant_tokens_atomic(
 
             return success
 
+        print("[grant_tokens_atomic] ERROR: No data returned from grant_tokens_for_purchase")
         logging.error("No data returned from grant_tokens_for_purchase")
         return False
 
     except Exception as e:
+        print(f"[grant_tokens_atomic] EXCEPTION: {str(e)}")
+        import traceback
+        print(f"[grant_tokens_atomic] Traceback: {traceback.format_exc()}")
         logging.error(f"Error granting tokens: {str(e)}")
         return False

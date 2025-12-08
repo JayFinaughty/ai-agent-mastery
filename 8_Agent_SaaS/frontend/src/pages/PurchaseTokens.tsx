@@ -1,10 +1,13 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
 import { useAuth } from '@/hooks/useAuth';
 import CheckoutForm from '@/components/tokens/CheckoutForm';
 import PricingCard from '@/components/tokens/PricingCard';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
 
 const stripePromise = loadStripe(
   import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || ''
@@ -18,6 +21,7 @@ const PRICING_TIERS = [
 
 export default function PurchaseTokens() {
   const { user, session } = useAuth();
+  const navigate = useNavigate();
   const [selectedTier, setSelectedTier] = useState<string | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -61,11 +65,33 @@ export default function PurchaseTokens() {
 
   return (
     <div className="container mx-auto p-6 max-w-6xl">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">Purchase Tokens</h1>
-        <p className="text-muted-foreground">
+      {/* Back Button */}
+      <div className="mb-6">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => clientSecret ? setClientSecret(null) : navigate('/')}
+          className="gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          {clientSecret ? 'Back to Packages' : 'Back to Chat'}
+        </Button>
+      </div>
+
+      {/* Centered Header */}
+      <div className="mb-12 text-center">
+        <h1 className="text-4xl font-bold mb-3">Purchase Tokens</h1>
+        <p className="text-muted-foreground text-lg mb-3">
           Select a token package to continue using the AI agent
         </p>
+        <Button
+          variant="link"
+          size="sm"
+          onClick={() => navigate('/token-history')}
+          className="text-sm"
+        >
+          View Transaction History →
+        </Button>
       </div>
 
       {!clientSecret && (

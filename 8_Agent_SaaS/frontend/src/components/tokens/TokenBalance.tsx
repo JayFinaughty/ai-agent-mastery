@@ -70,10 +70,10 @@ export default function TokenBalance() {
   return (
     <div className="flex items-center gap-3">
       <div className="flex items-center gap-2">
-        <Coins className="h-5 w-5" />
-        <Badge variant={tokens < 10 ? 'destructive' : 'secondary'} className="text-lg px-3 py-1">
-          {tokens} tokens
-        </Badge>
+        <Coins className="h-5 w-5 text-yellow-500" />
+        <span className="text-base font-medium text-white">
+          {tokens} {tokens === 1 ? 'token' : 'tokens'}
+        </span>
       </div>
       <Button
         onClick={() => navigate('/purchase-tokens')}

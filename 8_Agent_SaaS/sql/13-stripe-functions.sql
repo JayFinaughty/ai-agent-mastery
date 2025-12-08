@@ -125,3 +125,7 @@ COMMENT ON FUNCTION deduct_token_if_sufficient IS
 
 COMMENT ON FUNCTION grant_tokens_for_purchase IS
 'Atomically grant tokens from Stripe payment with idempotency checking';
+
+-- Grant execute permissions to service role
+GRANT EXECUTE ON FUNCTION deduct_token_if_sufficient(UUID) TO service_role;
+GRANT EXECUTE ON FUNCTION grant_tokens_for_purchase(UUID, INTEGER, TEXT, TEXT) TO service_role;

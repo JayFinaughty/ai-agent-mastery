@@ -188,17 +188,17 @@ class PaymentIntentResponse(BaseModel):
 async def stream_error_response(error_message: str, session_id: str):
     """
     Creates a streaming response for error messages.
-    
+
     Args:
         error_message: The error message to display to the user
         session_id: The current session ID
-        
+
     Yields:
         Encoded JSON chunks for the streaming response
     """
     # First yield the error message as text
     yield json.dumps({"text": error_message}).encode('utf-8') + b'\n'
-    
+
     # Then yield a final chunk with complete flag
     final_data = {
         "text": error_message,
@@ -207,6 +207,31 @@ async def stream_error_response(error_message: str, session_id: str):
         "complete": True
     }
     yield json.dumps(final_data).encode('utf-8') + b'\n'
+
+async def refund_token(supabase: Client, user_id: str, reason: str):
+    """
+    Refund a token to the user when request fails.
+
+    Args:
+        supabase: Supabase client instance
+        user_id: User UUID to refund
+        reason: Reason for refund (for logging)
+    """
+    try:
+        # Use grant_tokens_atomic with special IDs for refunds
+        event_id = f"refund_{int(time.time() * 1000)}"
+        payment_intent_id = f"error_refund_{reason}"
+
+        await grant_tokens_atomic(
+            supabase,
+            user_id,
+            1,  # Refund 1 token
+            event_id,
+            payment_intent_id
+        )
+        print(f"Refunded 1 token to user {user_id} due to: {reason}")
+    except Exception as e:
+        print(f"Error refunding token: {str(e)}")
 
 @app.post("/api/create-payment-intent")
 async def create_payment_intent(
@@ -261,16 +286,21 @@ async def stripe_webhook(request: Request):
         Returns 200 even on errors (after logging) to prevent retries
     """
     try:
+        print("=== WEBHOOK CALLED ===")
         payload = (await request.body()).decode('utf-8')
         sig_header = request.headers.get("stripe-signature")
+
+        print(f"Signature header present: {sig_header is not None}")
 
         if not sig_header:
             print("Warning: No Stripe signature header found")
             return {"success": False, "error": "No signature"}
 
         event = verify_webhook_signature(payload, sig_header)
+        print(f"Event type received: {event['type']}")
 
         if event['type'] == 'payment_intent.succeeded':
+            print("Processing payment_intent.succeeded event")
             payment_intent = event['data']['object']
             metadata = payment_intent.get('metadata', {})
 
@@ -278,6 +308,9 @@ async def stripe_webhook(request: Request):
             tier = metadata.get('tier')
             event_id = event['id']
             payment_intent_id = payment_intent['id']
+
+            print(f"Metadata - user_id: {user_id}, tier: {tier}")
+            print(f"Event ID: {event_id}, Payment Intent ID: {payment_intent_id}")
 
             if not user_id or not tier:
                 print(
@@ -287,10 +320,13 @@ async def stripe_webhook(request: Request):
                 return {"success": False, "error": "Missing metadata"}
 
             _, token_count = PRICING_TIERS.get(tier, (0, 0))
+            print(f"Token count for tier {tier}: {token_count}")
+
             if token_count == 0:
                 print(f"Warning: Invalid tier {tier}")
                 return {"success": False, "error": "Invalid tier"}
 
+            print(f"Calling grant_tokens_atomic for user {user_id} with {token_count} tokens")
             success = await grant_tokens_atomic(
                 supabase,
                 user_id,
@@ -298,6 +334,7 @@ async def stripe_webhook(request: Request):
                 event_id,
                 payment_intent_id
             )
+            print(f"grant_tokens_atomic returned: {success}")
 
             if success:
                 print(
@@ -309,15 +346,21 @@ async def stripe_webhook(request: Request):
                     f"Failed to grant tokens to user {user_id} "
                     f"(may be duplicate event)"
                 )
+        else:
+            print(f"Event type {event['type']} - not processing (only handling payment_intent.succeeded)")
 
+        print("=== WEBHOOK COMPLETE ===")
         return {"success": True}
 
     except HTTPException as e:
         print(f"Webhook validation error: {e.detail}")
+        print(f"HTTPException details: {e}")
         return {"success": False, "error": e.detail}
 
     except Exception as e:
         print(f"Webhook processing error: {str(e)}")
+        import traceback
+        print(f"Traceback: {traceback.format_exc()}")
         return {"success": False, "error": str(e)}
 
 @app.post("/api/pydantic-agent")
@@ -328,7 +371,9 @@ async def pydantic_agent(request: AgentRequest, user: Dict[str, Any] = Depends(v
             stream_error_response("User ID in request does not match authenticated user", request.session_id),
             media_type='text/plain'
         )
-        
+
+    token_was_deducted = False  # Track if we need to refund on error
+
     try:
         # Check rate limit
         rate_limit_ok = await check_rate_limit(supabase, request.user_id)
@@ -359,6 +404,8 @@ async def pydantic_agent(request: AgentRequest, user: Dict[str, Any] = Depends(v
                 ),
                 media_type='text/plain'
             )
+
+        token_was_deducted = True  # Mark that we deducted a token
 
         # Start request tracking in parallel
         request_tracking_task = asyncio.create_task(
@@ -422,123 +469,141 @@ async def pydantic_agent(request: AgentRequest, user: Dict[str, Any] = Depends(v
         async def stream_response():
             # Process title result if it exists (in the background)
             nonlocal conversation_title
+            nonlocal token_was_deducted
 
-            # Use the global HTTP client
-            agent_deps = AgentDeps(
-                embedding_client=embedding_client, 
-                supabase=supabase, 
-                http_client=http_client,
-                brave_api_key=os.getenv("BRAVE_API_KEY", ""),
-                searxng_base_url=os.getenv("SEARXNG_BASE_URL", ""),
-                memories=memories_str
-            )
-            
-            # Process any file attachments for the agent
-            binary_contents = []
-            if request.files:
-                for file in request.files:
+            try:
+                # Use the global HTTP client
+                agent_deps = AgentDeps(
+                    embedding_client=embedding_client,
+                    supabase=supabase,
+                    http_client=http_client,
+                    brave_api_key=os.getenv("BRAVE_API_KEY", ""),
+                    searxng_base_url=os.getenv("SEARXNG_BASE_URL", ""),
+                    memories=memories_str
+                )
+
+                # Process any file attachments for the agent
+                binary_contents = []
+                if request.files:
+                    for file in request.files:
+                        try:
+                            # Decode the base64 content
+                            binary_data = base64.b64decode(file.content)
+                            # Create a BinaryContent object
+                            fileMimeType = "application/pdf" if file.mimeType == "text/plain" else file.mimeType
+                            binary_content = BinaryContent(
+                                data=binary_data,
+                                media_type=fileMimeType
+                            )
+                            binary_contents.append(binary_content)
+                        except Exception as e:
+                            print(f"Error processing file {file.fileName}: {str(e)}")
+
+                # Create input for the agent with the query and any binary contents
+                agent_input = [request.query]
+                if binary_contents:
+                    agent_input.extend(binary_contents)
+
+                full_response = ""
+
+                # Use tracer context if available, otherwise use nullcontext
+                span_context = tracer.start_as_current_span("Pydantic-Ai-Trace") if tracer else nullcontext()
+
+                with span_context as span:
+                    if tracer and span:
+                        # Set user and session attributes for Langfuse
+                        span.set_attribute("langfuse.user.id", request.user_id)
+                        span.set_attribute("langfuse.session.id", session_id)
+                        span.set_attribute("input.value", request.query)
+
+                    # Run the agent with the user prompt, binary contents, and the chat history
+                    async with agent.iter(agent_input, deps=agent_deps, message_history=pydantic_messages) as run:
+                        async for node in run:
+                            if Agent.is_model_request_node(node):
+                                # A model request node => We can stream tokens from the model's request
+                                async with node.stream(run.ctx) as request_stream:
+                                    async for event in request_stream:
+                                        if isinstance(event, PartStartEvent) and event.part.part_kind == 'text':
+                                            yield json.dumps({"text": event.part.content}).encode('utf-8') + b'\n'
+                                            full_response += event.part.content
+                                        elif isinstance(event, PartDeltaEvent) and isinstance(event.delta, TextPartDelta):
+                                            delta = event.delta.content_delta
+                                            yield json.dumps({"text": full_response}).encode('utf-8') + b'\n'
+                                            full_response += delta
+
+                    # Set the output value after completion if tracing
+                    if tracer and span:
+                        span.set_attribute("output.value", full_response)
+
+                # After streaming is complete, store the full response in the database
+                message_data = run.result.new_messages_json()
+
+                # Store agent's response
+                await store_message(
+                    supabase=supabase,
+                    session_id=session_id,
+                    message_type="ai",
+                    content=full_response,
+                    message_data=message_data,
+                    data={"request_id": request.request_id}
+                )
+
+                # Wait for title generation to complete if it's running
+                if title_task:
                     try:
-                        # Decode the base64 content
-                        binary_data = base64.b64decode(file.content)
-                        # Create a BinaryContent object
-                        fileMimeType = "application/pdf" if file.mimeType == "text/plain" else file.mimeType
-                        binary_content = BinaryContent(
-                            data=binary_data,
-                            media_type=fileMimeType
-                        )
-                        binary_contents.append(binary_content)
-                    except Exception as e:
-                        print(f"Error processing file {file.fileName}: {str(e)}")
-            
-            # Create input for the agent with the query and any binary contents
-            agent_input = [request.query]
-            if binary_contents:
-                agent_input.extend(binary_contents)
-            
-            full_response = ""
-            
-            # Use tracer context if available, otherwise use nullcontext
-            span_context = tracer.start_as_current_span("Pydantic-Ai-Trace") if tracer else nullcontext()
-            
-            with span_context as span:
-                if tracer and span:
-                    # Set user and session attributes for Langfuse
-                    span.set_attribute("langfuse.user.id", request.user_id)
-                    span.set_attribute("langfuse.session.id", session_id)
-                    span.set_attribute("input.value", request.query)
-                
-                # Run the agent with the user prompt, binary contents, and the chat history
-                async with agent.iter(agent_input, deps=agent_deps, message_history=pydantic_messages) as run:
-                    async for node in run:
-                        if Agent.is_model_request_node(node):
-                            # A model request node => We can stream tokens from the model's request
-                            async with node.stream(run.ctx) as request_stream:
-                                async for event in request_stream:
-                                    if isinstance(event, PartStartEvent) and event.part.part_kind == 'text':
-                                        yield json.dumps({"text": event.part.content}).encode('utf-8') + b'\n'
-                                        full_response += event.part.content
-                                    elif isinstance(event, PartDeltaEvent) and isinstance(event.delta, TextPartDelta):
-                                        delta = event.delta.content_delta
-                                        yield json.dumps({"text": full_response}).encode('utf-8') + b'\n'
-                                        full_response += delta
-                
-                # Set the output value after completion if tracing
-                if tracer and span:
-                    span.set_attribute("output.value", full_response)
-                    
-            # After streaming is complete, store the full response in the database
-            message_data = run.result.new_messages_json()
-            
-            # Store agent's response
-            await store_message(
-                supabase=supabase,
-                session_id=session_id,
-                message_type="ai",
-                content=full_response,
-                message_data=message_data,
-                data={"request_id": request.request_id}
-            )
-            
-            # Wait for title generation to complete if it's running
-            if title_task:
-                try:
-                    title_result = await title_task
-                    conversation_title = title_result
-                    # Update the conversation title in the database
-                    await update_conversation_title(supabase, session_id, conversation_title)
-                    
-                    # Send the final title in the last chunk
-                    final_data = {
-                        "text": full_response,
-                        "session_id": session_id,
-                        "conversation_title": conversation_title,
-                        "complete": True
-                    }
-                    yield json.dumps(final_data).encode('utf-8') + b'\n'
-                except Exception as e:
-                    print(f"Error processing title: {str(e)}")
-            else:
-                yield json.dumps({"text": full_response, "complete": True}).encode('utf-8') + b'\n'
+                        title_result = await title_task
+                        conversation_title = title_result
+                        # Update the conversation title in the database
+                        await update_conversation_title(supabase, session_id, conversation_title)
 
-            # Wait for the memory task to complete if needed
-            try:
-                await memory_task
+                        # Send the final title in the last chunk
+                        final_data = {
+                            "text": full_response,
+                            "session_id": session_id,
+                            "conversation_title": conversation_title,
+                            "complete": True
+                        }
+                        yield json.dumps(final_data).encode('utf-8') + b'\n'
+                    except Exception as e:
+                        print(f"Error processing title: {str(e)}")
+                else:
+                    yield json.dumps({"text": full_response, "complete": True}).encode('utf-8') + b'\n'
+
+                # Wait for the memory task to complete if needed
+                try:
+                    await memory_task
+                except Exception as e:
+                    print(f"Error updating memories: {str(e)}")
+
+                # Wait for request tracking task to complete
+                try:
+                    await request_tracking_task
+                except Exception as e:
+                    print(f"Error tracking request: {str(e)}")
+                except asyncio.CancelledError:
+                    # This is expected if the task was cancelled
+                    pass
+
             except Exception as e:
-                print(f"Error updating memories: {str(e)}")
-                
-            # Wait for request tracking task to complete
-            try:
-                await request_tracking_task
-            except Exception as e:
-                print(f"Error tracking request: {str(e)}")
-            except asyncio.CancelledError:
-                # This is expected if the task was cancelled
-                pass
-        
+                # Refund token if streaming fails
+                print(f"Error in stream_response: {str(e)}")
+                if token_was_deducted:
+                    await refund_token(supabase, request.user_id, f"stream_error_{request.request_id}")
+                    token_was_deducted = False  # Prevent double refund
+
+                # Yield error message to user
+                error_msg = "I apologize, but I encountered an error processing your request. Your token has been refunded."
+                yield json.dumps({"text": error_msg, "error": str(e), "complete": True}).encode('utf-8') + b'\n'
+
         return StreamingResponse(stream_response(), media_type='text/plain')
 
     except Exception as e:
         print(f"Error processing request: {str(e)}")
+
+        # Refund token if we deducted one
+        if token_was_deducted:
+            await refund_token(supabase, request.user_id, f"error_{request.request_id}")
+
         # Store error message in conversation if session_id exists
         if request.session_id:
             await store_message(

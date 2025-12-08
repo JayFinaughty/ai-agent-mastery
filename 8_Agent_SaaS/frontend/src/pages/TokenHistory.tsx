@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { ArrowDownCircle, ArrowUpCircle, ArrowLeft } from 'lucide-react';
 
 interface Transaction {
   id: string;
@@ -17,6 +19,7 @@ interface Transaction {
 
 export default function TokenHistory() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -56,6 +59,19 @@ export default function TokenHistory() {
 
   return (
     <div className="container mx-auto p-6 max-w-6xl">
+      {/* Back Button */}
+      <div className="mb-6">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate('/')}
+          className="gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Chat
+        </Button>
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle>Token History</CardTitle>
@@ -88,14 +104,14 @@ export default function TokenHistory() {
                         {transaction.transaction_type === 'purchase' ? (
                           <>
                             <ArrowUpCircle className="h-4 w-4 text-green-500" />
-                            <Badge variant="outline" className="bg-green-50">
+                            <Badge variant="secondary">
                               Purchase
                             </Badge>
                           </>
                         ) : (
                           <>
                             <ArrowDownCircle className="h-4 w-4 text-blue-500" />
-                            <Badge variant="outline" className="bg-blue-50">
+                            <Badge variant="secondary">
                               Usage
                             </Badge>
                           </>

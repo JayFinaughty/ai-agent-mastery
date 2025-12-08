@@ -21,7 +21,7 @@ export default function PricingCard({
   onClick,
   loading = false
 }: PricingCardProps) {
-  const tokensPerDollar = (tokens / price).toFixed(1);
+  const tokensPerDollar = Math.round(tokens / price);
 
   return (
     <Card

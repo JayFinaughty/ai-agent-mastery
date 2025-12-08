@@ -36,34 +36,59 @@ export default function PaymentSuccess() {
       }
     };
 
-    const pollForTokenUpdate = async (initialBalance: number, maxAttempts = 10) => {
+    const pollForTokenUpdate = async (initialBalance: number) => {
       setUpdatingBalance(true);
 
-      for (let attempt = 0; attempt < maxAttempts; attempt++) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+      // Check immediately first (tokens might already be there)
+      try {
+        const { data, error } = await supabase
+          .from('user_profiles')
+          .select('tokens')
+          .eq('id', user.id)
+          .single();
 
-        try {
-          const { data, error } = await supabase
-            .from('user_profiles')
-            .select('tokens')
-            .eq('id', user.id)
-            .single();
+        if (error) throw error;
 
-          if (error) throw error;
-
-          const newBalance = data?.tokens || 0;
-          if (newBalance > initialBalance) {
-            setTokenBalance(newBalance);
-            setUpdatingBalance(false);
-            return;
-          }
-        } catch (error) {
-          console.error('Error polling token balance:', error);
+        const newBalance = data?.tokens || 0;
+        if (newBalance > initialBalance) {
+          setTokenBalance(newBalance);
+          setUpdatingBalance(false);
+          return;
         }
+      } catch (error) {
+        console.error('Error fetching token balance:', error);
       }
 
-      fetchTokenBalance();
-      setUpdatingBalance(false);
+      // If tokens aren't there yet, set up real-time subscription
+      const channel = supabase
+        .channel('payment-token-updates')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'user_profiles',
+            filter: `id=eq.${user.id}`,
+          },
+          (payload) => {
+            if (payload.new && 'tokens' in payload.new) {
+              const newTokens = (payload.new as { tokens: number }).tokens;
+              if (newTokens > initialBalance) {
+                setTokenBalance(newTokens);
+                setUpdatingBalance(false);
+                supabase.removeChannel(channel);
+              }
+            }
+          }
+        )
+        .subscribe();
+
+      // Safety timeout - stop waiting after 3 seconds
+      setTimeout(() => {
+        setUpdatingBalance(false);
+        fetchTokenBalance();
+        supabase.removeChannel(channel);
+      }, 3000);
     };
 
     if (!stripe || !user?.id) return;

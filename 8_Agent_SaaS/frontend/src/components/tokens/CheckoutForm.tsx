@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Lock } from 'lucide-react';
 
 export default function CheckoutForm() {
   const stripe = useStripe();
@@ -46,8 +47,14 @@ export default function CheckoutForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="bg-white p-6 rounded-lg shadow">
-        <h2 className="text-2xl font-bold mb-4">Payment Details</h2>
+      <div className="bg-card border border-border p-6 rounded-lg shadow-lg">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-2xl font-bold text-foreground">Payment Details</h2>
+          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <Lock className="h-4 w-4" />
+            <span>Secured by Stripe</span>
+          </div>
+        </div>
         <PaymentElement />
       </div>
 

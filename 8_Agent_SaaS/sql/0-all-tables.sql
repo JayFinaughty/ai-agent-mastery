@@ -185,9 +185,11 @@ CREATE TABLE transactions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES user_profiles(id) ON DELETE CASCADE,
     transaction_type TEXT NOT NULL CHECK (transaction_type IN ('purchase', 'consumption')),
-    token_amount INTEGER NOT NULL,
-    stripe_event_id TEXT,
+    amount INTEGER NOT NULL,
+    tokens INTEGER NOT NULL,
     stripe_payment_intent_id TEXT,
+    stripe_event_id TEXT,
+    metadata JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
@@ -302,6 +304,8 @@ $$ language 'plpgsql';
 CREATE OR REPLACE FUNCTION deduct_token_if_sufficient(p_user_id UUID)
 RETURNS TABLE(success BOOLEAN, remaining_tokens INTEGER, error_message TEXT)
 LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
     current_tokens INTEGER;
@@ -322,11 +326,21 @@ BEGIN
     END IF;
 
     UPDATE user_profiles
-    SET tokens = tokens - 1
+    SET tokens = tokens - 1,
+        updated_at = NOW()
     WHERE id = p_user_id;
 
-    INSERT INTO transactions (user_id, transaction_type, token_amount)
-    VALUES (p_user_id, 'consumption', -1);
+    INSERT INTO transactions (
+        user_id,
+        transaction_type,
+        amount,
+        tokens
+    ) VALUES (
+        p_user_id,
+        'consumption',
+        -1,
+        1
+    );
 
     RETURN QUERY SELECT TRUE, current_tokens - 1, NULL::TEXT;
 END;
@@ -341,48 +355,67 @@ CREATE OR REPLACE FUNCTION grant_tokens_for_purchase(
 )
 RETURNS TABLE(success BOOLEAN, new_balance INTEGER, error_message TEXT)
 LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
     current_balance INTEGER;
     event_exists BOOLEAN;
 BEGIN
+    -- Check if event has already been processed (idempotency)
     SELECT EXISTS(
-        SELECT 1 FROM transactions WHERE stripe_event_id = p_event_id
+        SELECT 1 FROM transactions
+        WHERE stripe_event_id = p_event_id
     ) INTO event_exists;
 
     IF event_exists THEN
-        SELECT tokens INTO current_balance FROM user_profiles WHERE id = p_user_id;
-        RETURN QUERY SELECT FALSE, current_balance, 'Event already processed'::TEXT;
+        RETURN QUERY SELECT FALSE, 0, 'Event already processed';
         RETURN;
     END IF;
 
-    UPDATE user_profiles
-    SET tokens = tokens + p_tokens
+    -- Lock user row to prevent race conditions
+    SELECT tokens INTO current_balance
+    FROM user_profiles
     WHERE id = p_user_id
-    RETURNING tokens INTO current_balance;
+    FOR UPDATE;
 
-    IF current_balance IS NULL THEN
-        RETURN QUERY SELECT FALSE, 0, 'User not found'::TEXT;
+    -- Check if user exists
+    IF NOT FOUND THEN
+        RETURN QUERY SELECT FALSE, 0, 'User not found';
         RETURN;
     END IF;
 
+    -- Atomically grant tokens
+    UPDATE user_profiles
+    SET tokens = tokens + p_tokens,
+        updated_at = NOW()
+    WHERE id = p_user_id;
+
+    -- Record purchase in transactions table
     INSERT INTO transactions (
         user_id,
         transaction_type,
-        token_amount,
-        stripe_event_id,
-        stripe_payment_intent_id
+        amount,
+        tokens,
+        stripe_payment_intent_id,
+        stripe_event_id
     ) VALUES (
         p_user_id,
         'purchase',
         p_tokens,
-        p_event_id,
-        p_payment_intent_id
+        p_tokens,
+        p_payment_intent_id,
+        p_event_id
     );
 
-    RETURN QUERY SELECT TRUE, current_balance, NULL::TEXT;
+    -- Return success with new balance
+    RETURN QUERY SELECT TRUE, current_balance + p_tokens, NULL::TEXT;
 END;
 $$;
+
+-- Grant execute permissions to service role
+GRANT EXECUTE ON FUNCTION deduct_token_if_sufficient(UUID) TO service_role;
+GRANT EXECUTE ON FUNCTION grant_tokens_for_purchase(UUID, INTEGER, TEXT, TEXT) TO service_role;
 
 -- ==============================================================================
 -- CREATE TRIGGERS
@@ -544,6 +577,13 @@ FOR SELECT
 USING (is_admin());
 
 CREATE POLICY "Deny delete for transactions" ON transactions FOR DELETE USING (false);
+
+-- ==============================================================================
+-- ENABLE REALTIME
+-- ==============================================================================
+
+-- Enable realtime replication for user_profiles table (for token balance updates)
+ALTER PUBLICATION supabase_realtime ADD TABLE user_profiles;
 
 -- ==============================================================================
 -- REVOKE PERMISSIONS
