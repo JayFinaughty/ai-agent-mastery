@@ -1,4 +1,4 @@
-# Dynamous AI Agent Mastery - Module 8: AI Agent SaaS
+# Dynamous AI Agent Mastery - Module 9: AI Agent SaaS
 
 A production-ready AI agent application with Stripe payment integration for token-based billing. This module takes the agent deployment from previous modules and adds monetization capabilities, turning it into a complete SaaS product. Users purchase tokens via Stripe and consume them when interacting with the AI agent.
 
@@ -9,7 +9,7 @@ The system includes independently deployable components: the AI agent API (with 
 The deployment structure has been designed for maximum flexibility and scalability:
 
 ```
-8_Agent_SaaS/
+9_Agent_SaaS/
 ├── backend_agent_api/      # AI Agent with FastAPI + Stripe payment endpoints
 ├── backend_rag_pipeline/   # Document processing pipeline - Handles knowledge ingestion
 ├── frontend/               # React application with token purchase flows
