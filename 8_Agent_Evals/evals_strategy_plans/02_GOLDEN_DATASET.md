@@ -461,6 +461,86 @@ cases:
 
 ---
 
+## AND vs OR Logic: Custom Evaluators
+
+### The Problem
+
+When you add multiple evaluators to a case, **all must pass** (AND logic):
+
+```yaml
+evaluators:
+  - Contains: "can't"      # Must be true AND
+  - Contains: "cannot"     # Must be true AND
+  - Contains: "sorry"      # Must be true
+```
+
+This means the response must contain "can't" AND "cannot" AND "sorry" — which is too strict for safety refusals where LLMs phrase things differently.
+
+### The Solution: ContainsAny (OR Logic)
+
+We provide a custom evaluator `ContainsAny` that passes if **any** keyword matches:
+
+```yaml
+evaluators:
+  - ContainsAny:
+      values: ["can't", "cannot", "sorry", "unable", "won't"]
+```
+
+Now if the response contains any one of these keywords, the test passes.
+
+### Creating the Custom Evaluator
+
+```python
+# evals/evaluators.py
+from dataclasses import dataclass
+from pydantic_evals.evaluators import Evaluator, EvaluatorContext, EvaluationReason
+
+@dataclass
+class ContainsAny(Evaluator[dict, str, None]):
+    """Check if output contains ANY of the specified values (OR logic)."""
+    values: list[str]
+    case_sensitive: bool = False
+
+    def evaluate(self, ctx: EvaluatorContext[dict, str, None]) -> EvaluationReason:
+        output = str(ctx.output)
+        check_output = output if self.case_sensitive else output.lower()
+
+        for value in self.values:
+            check_value = value if self.case_sensitive else value.lower()
+            if check_value in check_output:
+                return EvaluationReason(value=True, reason=f"Found '{value}'")
+
+        return EvaluationReason(
+            value=False, reason=f"None of {self.values} found in output"
+        )
+```
+
+### Registering Custom Evaluators
+
+To use custom evaluators in YAML, register them when loading:
+
+```python
+from evals.evaluators import ContainsAny
+
+dataset = Dataset[dict, str].from_file(
+    "golden_dataset.yaml",
+    custom_evaluator_types=[ContainsAny]
+)
+```
+
+### Why This Matters
+
+| Approach | Behavior | Use Case |
+|----------|----------|----------|
+| Multiple `Contains` | ALL must match (AND) | Response must have specific structure |
+| `ContainsAny` | ANY match passes (OR) | Multiple valid phrasings (refusals, greetings) |
+
+**Teaching moment:** In the golden dataset, we intentionally keep one safety test with a single `Contains` check to demonstrate its fragility. When it fails, it shows why:
+1. Custom evaluators like `ContainsAny` help with known variations
+2. **LLMJudge (Video 4)** is needed for truly understanding intent
+
+---
+
 ## Evaluators Coming in Later Videos
 
 | Video | Evaluator | Purpose |
@@ -675,6 +755,164 @@ Benefits:
 - Comparing agent versions
 
 For local development (this video), the YAML approach is simpler and doesn't require external services.
+
+---
+
+## Instructor Guide: Recording Video 2
+
+### Pre-Recording Checklist
+
+1. **Environment Setup:**
+   ```bash
+   cd 8_Agent_Evals/backend_agent_api
+
+   # Verify .env has required variables
+   cat .env | grep -E "^(LLM_|SUPABASE_|EMBEDDING_)" | head -5
+
+   # Test agent works
+   python -c "from agent import agent; print('Agent loaded successfully')"
+   ```
+
+2. **Verify evals directory exists:**
+   ```bash
+   ls evals/
+   # Should show: __init__.py  golden_dataset.yaml  run_evals.py
+   ```
+
+3. **Do a test run before recording:**
+   ```bash
+   python evals/run_evals.py
+   ```
+
+### Recording Flow
+
+**Part 1: Introduction (2-3 min)**
+- Open the strategy doc, show the Andrew Ng quote
+- Explain "10-case golden dataset" philosophy
+- Show the workflow diagram
+
+**Part 2: Create the Dataset (5-7 min)**
+- Open `evals/golden_dataset.yaml`
+- Walk through each category:
+  - General responses (3 cases) - greeting, simple question, farewell
+  - RAG queries (2 cases) - mention "we'll add tool verification in Video 3"
+  - Calculations (2 cases) - simple math and factorial
+  - Safety (2 cases) - mention "we'll add LLMJudge in Video 4"
+  - Web search (1 case)
+- Explain global evaluators (IsInstance, MaxDuration)
+
+**Part 3: Create the Runner (3-5 min)**
+- Open `evals/run_evals.py`
+- Explain `run_agent` function and how it wraps our agent
+- Explain the 80% threshold concept
+- Point out exit codes for CI/CD integration
+
+**Part 4: Run and Interpret (3-5 min)**
+- Run the evaluation: `python evals/run_evals.py`
+- Show the output table
+- Interpret pass/fail results
+- Discuss what to do when a case fails
+
+### Expected Output
+
+```
+============================================================
+GOLDEN DATASET EVALUATION
+============================================================
+
+Dataset: golden_dataset.yaml
+Cases: 10
+Pass Threshold: 80%
+
+------------------------------------------------------------
+
+                        Evaluation Report
++---------------------+---------+----------------+-------+
+| Case                | Passed  | Evaluator      | Score |
++---------------------+---------+----------------+-------+
+| greeting            | True    | Contains       | 1.0   |
+| greeting            | True    | IsInstance     | 1.0   |
+| greeting            | True    | MaxDuration    | 1.0   |
++---------------------+---------+----------------+-------+
+| simple_question     | True    | Contains       | 1.0   |
+| ...                 | ...     | ...            | ...   |
++---------------------+---------+----------------+-------+
+
+============================================================
+SUMMARY
+============================================================
+Total Cases:   10
+Passed:        9
+Failed:        1
+Pass Rate:     90.0%
+============================================================
+
+PASSED - Above 80% threshold
+```
+
+### Troubleshooting During Recording
+
+| Issue | Quick Fix |
+|-------|-----------|
+| `ModuleNotFoundError: agent` | Run from `backend_agent_api/` directory |
+| All tests timeout | Check LLM_API_KEY in .env |
+| Safety tests fail | LLM might phrase differently; this demonstrates why we need LLMJudge in Video 4 |
+| YAML syntax error | Check indentation (use 2 spaces) |
+| RAG tests fail | Supabase might not have documents; MaxDuration should still pass |
+
+### Key Teaching Moments
+
+1. **"Why only 10 cases?"**
+   - Reference Andrew Ng quote: "That's all you need to start"
+   - Start simple, add more as you learn what breaks
+
+2. **"Why no LLMJudge here?"**
+   - We want deterministic, fast, free checks first
+   - LLMJudge comes in Video 4
+
+3. **"What if a case fails?"**
+   - That's actually good! The eval caught something
+   - Either fix the agent or adjust the expectation
+
+4. **"Why are safety checks fragile?"**
+   - Simple keyword checks can't understand intent
+   - LLMs phrase refusals differently
+   - This motivates LLMJudge in Video 4
+
+5. **"Can I run this in CI?"**
+   - Yes! The exit code makes it perfect for CI/CD
+   - Show the GitHub Actions example from the doc
+
+### Post-Recording Git Workflow
+
+```bash
+# Ensure you're on the prep branch
+git checkout module-8-prep-evals
+
+# Stage the new files
+git add evals/__init__.py evals/evaluators.py evals/golden_dataset.yaml evals/run_evals.py
+
+# Commit
+git commit -m "Add golden dataset evaluation (Video 2)"
+
+# Tag this state
+git tag module-8-01-golden-dataset
+
+# Push commit and tag
+git push origin module-8-prep-evals
+git push origin module-8-01-golden-dataset
+```
+
+### Files Created in This Video
+
+```
+backend_agent_api/
+├── evals/
+│   ├── __init__.py            # Package init
+│   ├── evaluators.py          # Custom evaluators (ContainsAny)
+│   ├── golden_dataset.yaml    # 10 test cases
+│   └── run_evals.py           # Evaluation script
+```
 
 ---
 
