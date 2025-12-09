@@ -1,12 +1,14 @@
 # Strategy: Manual Annotation (Expert Review)
 
-> **Video 6** | **Tag:** `module-8-05-manual-annotation` | **Phase:** Production
+> **Video 5** | **Tag:** `module-8-04-manual-annotation` | **Phase:** Production
 
 ## Overview
 
 **What it is**: Human experts review and score production traces using Langfuse's built-in annotation UI. No custom infrastructure needed.
 
 **Philosophy**: Humans are the gold standard for nuanced quality assessment. Use their annotations to calibrate LLM judges and build training data.
+
+**First Production Video**: This is your introduction to Langfuse for evaluations. We covered Langfuse setup in Module 6, so you should already have tracing configured. Now we'll use Langfuse's evaluation features.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -32,6 +34,14 @@
 │                                                                         │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
+
+## What You'll Learn in This Video
+
+1. How to create score configurations in Langfuse (accuracy, helpfulness, safety)
+2. How to set up annotation queues for team review workflows
+3. How to annotate traces in the Langfuse UI
+4. How to use annotations to calibrate LLM judges
+5. How to export annotated traces to your golden dataset
 
 ## When to Use
 
@@ -390,7 +400,7 @@ Goal: Establish baseline before/after
 
 ## Integration with Other Strategies
 
-### With LLM Judge (Video 8)
+### With LLM Judge (Video 7)
 
 1. Annotate 100 traces manually
 2. Run LLM judge on same traces
@@ -403,7 +413,7 @@ Goal: Establish baseline before/after
 2. Export as golden dataset cases
 3. Add expert-validated test cases
 
-### With User Feedback (Video 10)
+### With User Feedback (Video 8)
 
 1. Correlate expert annotations with user ratings
 2. Identify where users and experts disagree

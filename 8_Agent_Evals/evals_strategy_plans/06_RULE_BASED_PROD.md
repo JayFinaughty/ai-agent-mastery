@@ -1,482 +1,312 @@
 # Strategy: Rule-Based Evaluation (Production)
 
-> **Video 7** | **Tag:** `module-8-06-rule-based-prod` | **Phase:** Production
+> **Video 6** | **Tag:** `module-8-05-rule-based-prod` | **Phase:** Production
 
 ## Overview
 
-**What it is**: Real-time response gating with rule-based checks, plus syncing results to Langfuse for analytics.
+**What it is**: Running your rule-based evaluators from Video 3 on production traces and syncing results to Langfuse for monitoring.
 
-**Philosophy**: In production, safety rules must run on every request. Block unsafe responses before they reach users. Track violations for monitoring.
+**Philosophy**: The evaluators you built locally (`NoPII`, `NoForbiddenWords`, `HasMatchingSpan`) work in production too. Just add Langfuse score syncing.
+
+**Building on Video 3**: You already have custom evaluators. Now we run them on real production data and track results in Langfuse.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                     RULE-BASED EVALUATION (PRODUCTION)                  │
 │                                                                         │
-│   User Request                                                          │
-│        │                                                                │
-│        ▼                                                                │
-│   ┌─────────┐      ┌─────────────┐      ┌─────────────┐                │
-│   │  Agent  │─────►│  Rule Gate  │─────►│  Response   │                │
-│   │  Output │      │  (<10ms)    │      │  to User    │                │
-│   └─────────┘      └──────┬──────┘      └─────────────┘                │
-│                           │                                             │
-│                           │ Async                                       │
-│                           ▼                                             │
-│                    ┌─────────────┐                                      │
-│                    │  Langfuse   │                                      │
-│                    │  Score Sync │                                      │
-│                    └─────────────┘                                      │
+│   Production Trace         pydantic-evals           Langfuse            │
+│   ────────────────         ─────────────           ─────────            │
 │                                                                         │
-│   Block: PII, SQL injection, credit cards                              │
-│   Flag: Profanity, length limits, encoding                             │
-│   Log: All violations for monitoring                                    │
+│   ┌─────────────┐         ┌─────────────┐         ┌─────────────┐      │
+│   │   Agent     │         │   NoPII     │         │   Scores    │      │
+│   │   Response  │────────►│   Contains  │────────►│   Synced    │      │
+│   │   + Trace   │         │   Custom    │         │   to Trace  │      │
+│   └─────────────┘         └─────────────┘         └─────────────┘      │
+│                                                                         │
+│   Reuse your local evaluators. Add Langfuse sync.                      │
 │                                                                         │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
+## What You'll Learn in This Video
+
+1. How to run pydantic-evals evaluators on production traces
+2. How to sync evaluation scores to Langfuse
+3. How to set up async evaluation (non-blocking)
+4. How to monitor rule violations in Langfuse dashboard
+
 ## Difference from Local
 
-| Aspect | Local (Video 3) | Production (Video 7) |
+| Aspect | Local (Video 3) | Production (Video 6) |
 |--------|-----------------|----------------------|
-| **When** | Offline, batch | Real-time, every request |
-| **Purpose** | Test cases | Response gating |
-| **Blocking** | N/A | Yes - prevent unsafe responses |
-| **Langfuse** | Not used | Scores synced for analytics |
-| **Speed** | Not critical | Must be <10ms |
+| **Data** | Golden dataset (10 cases) | Real production traces |
+| **When** | Manual runs | After each request (async) |
+| **Output** | Terminal report | Langfuse scores |
+| **Purpose** | Test before deploy | Monitor in production |
 
 ---
 
 ## Implementation
 
-### Step 1: Rule Engine
+### Step 1: Reuse Your Evaluators from Video 3
+
+You already built these in Video 3:
 
 ```python
-# backend_agent_api/evals/rule_engine.py
+# backend_agent_api/evals/custom_evaluators.py (from Video 3)
 
+from dataclasses import dataclass
 import re
-from dataclasses import dataclass, field
-from enum import Enum
-from typing import Callable, Optional
-
-class Severity(Enum):
-    CRITICAL = "critical"  # Block response
-    WARNING = "warning"    # Flag but allow
-    INFO = "info"          # Log only
-
-class Action(Enum):
-    BLOCK = "block"
-    FLAG = "flag"
-    LOG = "log"
+from pydantic_evals.evaluators import Evaluator, EvaluatorContext, EvaluationReason
 
 @dataclass
-class Violation:
-    """A rule violation"""
-    rule_name: str
-    severity: Severity
-    action: Action
-    message: str
-    details: dict = field(default_factory=dict)
+class NoPII(Evaluator):
+    """Check that response doesn't contain PII patterns."""
+
+    def evaluate(self, ctx: EvaluatorContext) -> EvaluationReason:
+        output = str(ctx.output)
+
+        patterns = {
+            'phone': r'\b\d{3}[-.]?\d{3}[-.]?\d{4}\b',
+            'ssn': r'\b\d{3}[-]?\d{2}[-]?\d{4}\b',
+            'email': r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',
+        }
+
+        for pii_type, pattern in patterns.items():
+            if re.search(pattern, output):
+                return EvaluationReason(
+                    value=False,
+                    reason=f"Found {pii_type} pattern in output"
+                )
+
+        return EvaluationReason(value=True, reason="No PII detected")
+
 
 @dataclass
-class RuleResult:
-    """Result of rule evaluation"""
-    passed: bool
-    blocked: bool
-    violations: list[Violation]
-    score: float  # 1.0 = clean, 0.0 = blocked
+class NoForbiddenWords(Evaluator):
+    """Check that response doesn't contain forbidden words."""
 
-@dataclass
-class Rule:
-    """A single rule definition"""
-    name: str
-    check: Callable[[str, dict], Optional[Violation]]
-    enabled: bool = True
+    forbidden: list[str]
 
+    def evaluate(self, ctx: EvaluatorContext) -> EvaluationReason:
+        output = str(ctx.output).lower()
+        found = [w for w in self.forbidden if w.lower() in output]
 
-class RuleEngine:
-    """Fast rule engine for production use."""
-
-    def __init__(self):
-        self.rules: list[Rule] = []
-        self._register_default_rules()
-
-    def evaluate(self, response: str, context: dict = None) -> RuleResult:
-        """Evaluate response against all rules. Must be <10ms."""
-        context = context or {}
-        violations = []
-
-        for rule in self.rules:
-            if not rule.enabled:
-                continue
-            violation = rule.check(response, context)
-            if violation:
-                violations.append(violation)
-
-        blocked = any(v.action == Action.BLOCK for v in violations)
-        score = 0.0 if blocked else (1.0 - len(violations) * 0.1)
-
-        return RuleResult(
-            passed=len(violations) == 0,
-            blocked=blocked,
-            violations=violations,
-            score=max(0.0, score)
-        )
-
-    def _register_default_rules(self):
-        """Register production safety rules."""
-
-        # PII: Credit Card (BLOCK)
-        self.rules.append(Rule(
-            name="pii_credit_card",
-            check=self._check_credit_card
-        ))
-
-        # PII: SSN (BLOCK)
-        self.rules.append(Rule(
-            name="pii_ssn",
-            check=self._check_ssn
-        ))
-
-        # PII: Phone (FLAG)
-        self.rules.append(Rule(
-            name="pii_phone",
-            check=self._check_phone
-        ))
-
-        # PII: Email (FLAG)
-        self.rules.append(Rule(
-            name="pii_email",
-            check=self._check_email
-        ))
-
-        # Empty Response (FLAG)
-        self.rules.append(Rule(
-            name="empty_response",
-            check=self._check_empty
-        ))
-
-    # === Rule Check Functions ===
-
-    def _check_credit_card(self, response: str, ctx: dict) -> Optional[Violation]:
-        """Detect credit card numbers using Luhn algorithm."""
-        pattern = r'\b(?:\d[-\s]?){13,19}\b'
-        for match in re.findall(pattern, response):
-            digits = re.sub(r'\D', '', match)
-            if self._luhn_check(digits):
-                return Violation(
-                    rule_name="pii_credit_card",
-                    severity=Severity.CRITICAL,
-                    action=Action.BLOCK,
-                    message="Credit card number detected",
-                    details={"pattern": "****" + digits[-4:]}
-                )
-        return None
-
-    def _luhn_check(self, num: str) -> bool:
-        """Validate using Luhn algorithm."""
-        if not num.isdigit() or len(num) < 13:
-            return False
-        total = sum(
-            (d * 2 - 9 if d * 2 > 9 else d * 2) if i % 2 else d
-            for i, d in enumerate(int(x) for x in reversed(num))
-        )
-        return total % 10 == 0
-
-    def _check_ssn(self, response: str, ctx: dict) -> Optional[Violation]:
-        """Detect SSN patterns."""
-        pattern = r'\b\d{3}[-]?\d{2}[-]?\d{4}\b'
-        for match in re.findall(pattern, response):
-            digits = re.sub(r'\D', '', match)
-            # Valid SSN ranges
-            if not (digits.startswith('000') or digits.startswith('666') or
-                    int(digits[:3]) >= 900):
-                return Violation(
-                    rule_name="pii_ssn",
-                    severity=Severity.CRITICAL,
-                    action=Action.BLOCK,
-                    message="Potential SSN detected",
-                    details={}
-                )
-        return None
-
-    def _check_phone(self, response: str, ctx: dict) -> Optional[Violation]:
-        """Detect phone numbers."""
-        patterns = [
-            r'\b\d{3}[-.]?\d{3}[-.]?\d{4}\b',
-            r'\b\+\d{1,3}[-.]?\d{3,4}[-.]?\d{4}\b',
-            r'\(\d{3}\)\s*\d{3}[-.]?\d{4}',
-        ]
-        for pattern in patterns:
-            if re.search(pattern, response):
-                return Violation(
-                    rule_name="pii_phone",
-                    severity=Severity.WARNING,
-                    action=Action.FLAG,
-                    message="Phone number detected",
-                    details={}
-                )
-        return None
-
-    def _check_email(self, response: str, ctx: dict) -> Optional[Violation]:
-        """Detect email addresses (excluding examples)."""
-        pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
-        matches = [m for m in re.findall(pattern, response)
-                   if not m.endswith('@example.com')]
-        if matches:
-            return Violation(
-                rule_name="pii_email",
-                severity=Severity.WARNING,
-                action=Action.FLAG,
-                message=f"Email address detected: {len(matches)} found",
-                details={}
+        if found:
+            return EvaluationReason(
+                value=False,
+                reason=f"Found forbidden words: {found}"
             )
-        return None
-
-    def _check_empty(self, response: str, ctx: dict) -> Optional[Violation]:
-        """Detect empty responses."""
-        if not response or not response.strip():
-            return Violation(
-                rule_name="empty_response",
-                severity=Severity.WARNING,
-                action=Action.FLAG,
-                message="Response is empty",
-                details={}
-            )
-        return None
+        return EvaluationReason(value=True, reason="No forbidden words")
 ```
 
-### Step 2: Response Gate
+### Step 2: Create Production Evaluator with Langfuse Sync
 
 ```python
-# backend_agent_api/evals/response_gate.py
+# backend_agent_api/evals/prod_rules.py
 
-from typing import Tuple, Optional
-from rule_engine import RuleEngine, RuleResult
-
-class ResponseGate:
-    """
-    Pre-response safety gate.
-    Blocks unsafe responses before they reach users.
-    """
-
-    def __init__(self):
-        self.engine = RuleEngine()
-
-    def check(self, response: str, context: dict = None) -> Tuple[bool, Optional[str], RuleResult]:
-        """
-        Check response against safety rules.
-
-        Returns:
-            (should_send, replacement_message, result)
-        """
-        result = self.engine.evaluate(response, context)
-
-        if result.blocked:
-            replacement = self._safe_replacement(result)
-            return False, replacement, result
-
-        return True, None, result
-
-    def _safe_replacement(self, result: RuleResult) -> str:
-        """Generate safe replacement for blocked response."""
-        for v in result.violations:
-            if v.rule_name.startswith("pii_"):
-                return (
-                    "I apologize, but I cannot share that information "
-                    "as it may contain sensitive data. How else can I help?"
-                )
-        return "I apologize, but I cannot provide that response."
-
-
-# Singleton for use in API
-response_gate = ResponseGate()
-```
-
-### Step 3: Langfuse Sync
-
-```python
-# backend_agent_api/evals/langfuse_sync.py
-
+from dataclasses import dataclass
 from langfuse import Langfuse
-from rule_engine import RuleResult
+from pydantic_evals.evaluators import EvaluatorContext, EvaluationReason
+
+from custom_evaluators import NoPII, NoForbiddenWords
 
 langfuse = Langfuse()
 
-async def sync_rule_scores(trace_id: str, result: RuleResult):
-    """
-    Sync rule evaluation results to Langfuse.
-    Run async - don't block response.
-    """
 
-    # Overall rule score
-    langfuse.score(
-        trace_id=trace_id,
-        name="rule_safety_score",
-        value=result.score,
-        comment=f"Violations: {len(result.violations)}"
-    )
+@dataclass
+class ProductionRuleEvaluator:
+    """Run rule-based evaluators and sync to Langfuse."""
 
-    # Pass/fail boolean
-    langfuse.score(
-        trace_id=trace_id,
-        name="rule_passed",
-        value=1.0 if result.passed else 0.0,
-        data_type="BOOLEAN"
-    )
+    def __init__(self):
+        self.evaluators = [
+            ("no_pii", NoPII()),
+            ("no_forbidden", NoForbiddenWords(
+                forbidden=["password", "secret", "confidential"]
+            )),
+        ]
 
-    # Blocked status
-    if result.blocked:
-        langfuse.score(
-            trace_id=trace_id,
-            name="rule_blocked",
-            value=1.0,
-            comment="Response blocked by safety rules"
+    async def evaluate_and_sync(
+        self,
+        trace_id: str,
+        output: str,
+        inputs: dict = None
+    ):
+        """
+        Run all evaluators and sync scores to Langfuse.
+
+        Call this async after response is sent to user.
+        """
+        ctx = EvaluatorContext(
+            name="production_eval",
+            inputs=inputs or {},
+            output=output,
+            expected_output=None,
+            metadata={},
+            duration=0.0,
+            span_tree=None
         )
 
-    # Individual violations
-    for v in result.violations:
+        all_passed = True
+
+        for eval_name, evaluator in self.evaluators:
+            result = evaluator.evaluate(ctx)
+
+            # Sync to Langfuse
+            langfuse.score(
+                trace_id=trace_id,
+                name=f"rule_{eval_name}",
+                value=1.0 if result.value else 0.0,
+                comment=result.reason
+            )
+
+            if not result.value:
+                all_passed = False
+
+        # Overall pass/fail score
         langfuse.score(
             trace_id=trace_id,
-            name=f"rule_violation_{v.rule_name}",
-            value=0.0,
-            comment=v.message
+            name="rule_check_passed",
+            value=1.0 if all_passed else 0.0
         )
+
+        return all_passed
+
+
+# Singleton
+prod_evaluator = ProductionRuleEvaluator()
 ```
 
-### Step 4: Integration with Agent API
+### Step 3: Integrate with Agent API
 
 ```python
 # backend_agent_api/agent_api.py (additions)
 
 import asyncio
-from evals.response_gate import response_gate
-from evals.langfuse_sync import sync_rule_scores
+from evals.prod_rules import prod_evaluator
 
 @app.post("/api/pydantic-agent")
 async def pydantic_agent_endpoint(request: AgentRequest):
     # ... existing agent code generates response ...
 
-    # Check rules before sending (BLOCKING - must be fast)
-    should_send, replacement, rule_result = response_gate.check(
-        response=full_response,
-        context={
-            "query": request.query,
-            "user_id": request.user_id
-        }
-    )
+    # Get trace_id from Langfuse context
+    trace_id = langfuse_context.get_current_trace_id()
 
-    # Sync to Langfuse (ASYNC - don't wait)
+    # Run evaluators async (don't block response)
     if trace_id:
-        asyncio.create_task(sync_rule_scores(trace_id, rule_result))
+        asyncio.create_task(
+            prod_evaluator.evaluate_and_sync(
+                trace_id=trace_id,
+                output=full_response,
+                inputs={"query": request.query}
+            )
+        )
 
-    # Return response or safe replacement
-    if not should_send:
-        yield {"text": replacement, "blocked": True}
-        return
-
-    yield {"text": full_response, "complete": True}
+    # Return response to user immediately
+    return {"response": full_response}
 ```
+
+**Key point:** The evaluation runs AFTER the response is sent. Users don't wait.
 
 ---
 
-## Langfuse Dashboard
+## What You See in Langfuse
 
-After integrating, you'll see in Langfuse:
+After integration, each trace will have scores attached:
 
-### Scores on Traces
-- `rule_safety_score`: 0.0-1.0 overall safety
-- `rule_passed`: Boolean pass/fail
-- `rule_blocked`: 1.0 if response was blocked
-- `rule_violation_*`: Individual rule violations
+| Score Name | Type | Meaning |
+|------------|------|---------|
+| `rule_no_pii` | 0 or 1 | No PII detected |
+| `rule_no_forbidden` | 0 or 1 | No forbidden words |
+| `rule_check_passed` | 0 or 1 | All rules passed |
 
-### Analytics You Can Build
-- **Block rate over time**: Are safety issues increasing?
-- **Common violations**: What rules trigger most?
-- **User correlation**: Do certain users trigger more flags?
+### Langfuse Dashboard Uses
+
+- **Filter traces** by `rule_check_passed = 0` to find violations
+- **Track violation rate** over time
+- **Correlate** with user feedback
 
 ---
 
-## Production Configuration
+## Adding More Rules
 
-### Environment Variables
-
-```bash
-# .env
-RULE_BLOCKING_ENABLED=true       # Enable blocking in production
-RULE_SYNC_TO_LANGFUSE=true       # Sync scores to Langfuse
-RULE_LOG_VIOLATIONS=true          # Log all violations
-```
-
-### Enabling/Disabling Rules
+To add a new rule, just add it to the evaluators list:
 
 ```python
-# Disable a rule
-engine.rules["pii_phone"].enabled = False
+from pydantic_evals.evaluators import Contains
 
-# Add custom rule
-engine.rules.append(Rule(
-    name="custom_check",
-    check=my_custom_check_function
-))
+self.evaluators = [
+    ("no_pii", NoPII()),
+    ("no_forbidden", NoForbiddenWords(forbidden=["password", "secret"])),
+    # Add more:
+    ("has_greeting", Contains(value="hello", case_sensitive=False)),
+]
 ```
 
 ---
 
-## Testing
+## Optional: Response Blocking
+
+If you need to BLOCK responses (not just log), add a check before returning:
 
 ```python
-# tests/test_rule_engine.py
+# Simple blocking pattern
+async def check_before_send(response: str) -> tuple[bool, str]:
+    """Check response before sending. Returns (should_send, message)."""
 
-import pytest
-from evals.rule_engine import RuleEngine
+    ctx = EvaluatorContext(output=response, ...)
 
-@pytest.fixture
-def engine():
-    return RuleEngine()
+    # Check critical rules
+    pii_result = NoPII().evaluate(ctx)
 
-def test_clean_response_passes(engine):
-    result = engine.evaluate("Hello! How can I help you today?")
-    assert result.passed
-    assert not result.blocked
-    assert result.score == 1.0
+    if not pii_result.value:
+        return False, "I cannot share that information as it may contain sensitive data."
 
-def test_credit_card_blocked(engine):
-    result = engine.evaluate("Your card: 4111-1111-1111-1111")
-    assert result.blocked
-    assert any(v.rule_name == "pii_credit_card" for v in result.violations)
-
-def test_ssn_blocked(engine):
-    result = engine.evaluate("SSN: 123-45-6789")
-    assert result.blocked
-
-def test_phone_flagged_not_blocked(engine):
-    result = engine.evaluate("Call me at 555-123-4567")
-    assert not result.blocked  # Flagged, not blocked
-    assert not result.passed   # But didn't pass clean
-    assert any(v.rule_name == "pii_phone" for v in result.violations)
-
-def test_example_email_allowed(engine):
-    result = engine.evaluate("Use format: user@example.com")
-    assert result.passed  # example.com is allowed
+    return True, response
 ```
+
+**Note:** Blocking adds latency. Only block for critical safety rules.
 
 ---
 
-## What's Different from Local
+## Best Practices
 
-| Local (Video 3) | Production (Video 7) |
-|-----------------|----------------------|
-| `pydantic-evals` evaluators | Custom `RuleEngine` class |
-| Batch evaluation | Real-time per-request |
-| Test cases | Live responses |
-| Terminal output | Langfuse scores |
-| No blocking | Response blocking |
+### 1. Run Async, Don't Block
 
-The local version uses pydantic-evals for testing. The production version uses a custom engine optimized for speed and real-time blocking.
+```python
+# ✅ Good - non-blocking
+asyncio.create_task(prod_evaluator.evaluate_and_sync(...))
+
+# ❌ Bad - blocks response
+await prod_evaluator.evaluate_and_sync(...)
+```
+
+### 2. Keep Evaluators Fast
+
+Your custom evaluators should be <10ms each. Regex checks are fine. Avoid:
+- API calls in evaluators
+- Complex computations
+- Database queries
+
+### 3. Use Langfuse Filters
+
+Don't build custom dashboards. Use Langfuse's built-in filtering:
+- Filter by score name and value
+- Group by time period
+- Export for analysis
+
+---
+
+## What's Next
+
+| Video | What You'll Add |
+|-------|-----------------|
+| **Video 7: LLM Judge Prod** | AI-powered quality scoring on production traces |
+| **Video 8: User Feedback** | Collect and analyze user ratings |
 
 ---
 
 ## Resources
 
 - [Langfuse Scores API](https://langfuse.com/docs/scores)
-- [Langfuse Python SDK](https://langfuse.com/docs/sdk/python)
+- [pydantic-evals Custom Evaluators](https://ai.pydantic.dev/evals/evaluators/custom/)

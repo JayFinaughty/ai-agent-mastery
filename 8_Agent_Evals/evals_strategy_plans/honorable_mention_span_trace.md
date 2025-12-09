@@ -1,6 +1,6 @@
 # Strategy: Span & Trace Analysis
 
-> **Video 9** | **Tag:** `module-8-08-span-trace` | **Phase:** Production
+> **Honorable Mention** | **Phase:** Production
 
 ## Overview
 

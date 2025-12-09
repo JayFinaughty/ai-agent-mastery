@@ -2,7 +2,7 @@
 
 ## Overview
 
-Tags mark the codebase state after each video's implementation. The tag number matches the video number (minus the intro), making it easy to checkout the exact state shown in any video.
+Tags mark the codebase state after each video's implementation. The tag number corresponds to the implementation order, making it easy to checkout the exact state shown in any video.
 
 **Key Principle:** Implementation order = Teaching order = Tag order
 
@@ -37,14 +37,14 @@ Real user data, tracing, and observability.
 
 | Order | Feature | Tag | What's Added |
 |-------|---------|-----|--------------|
-| 4 | Langfuse Setup | `module-8-04-langfuse-setup` | Tracing integration, score sync |
-| 5 | Manual Annotation | `module-8-05-manual-annotation` | Annotation workflow, Langfuse UI |
-| 6 | Rule-Based (Prod) | `module-8-06-rule-based-prod` | Score sync to Langfuse, alerts |
-| 7 | LLM Judge (Prod) | `module-8-07-llm-judge-prod` | Langfuse built-in judge, async scoring |
-| 8 | Span/Trace | `module-8-08-span-trace` | Trace-based evaluation, tool flow analysis |
-| 9 | User Feedback | `module-8-09-user-feedback` | Frontend widget, feedback scores |
+| 4 | Manual Annotation | `module-8-04-manual-annotation` | Annotation workflow, Langfuse UI intro |
+| 5 | Rule-Based (Prod) | `module-8-05-rule-based-prod` | Score sync to Langfuse, alerts |
+| 6 | LLM Judge (Prod) | `module-8-06-llm-judge-prod` | Langfuse built-in judge, async scoring |
+| 7 | User Feedback | `module-8-07-user-feedback` | Frontend widget, feedback scores |
 
 > **Note:** Tags are cumulative. Each tag includes all previous implementations.
+>
+> **Note:** Langfuse setup was covered in Module 6. Video 5 (Manual Annotation) serves as the intro to Langfuse for evaluations.
 
 ---
 
@@ -90,16 +90,14 @@ git checkout module-8-prep-evals
 
 | Video # | Video Title | Tag | Strategy Doc |
 |---------|-------------|-----|--------------|
-| 1 | Introduction to Agent Evals | — (no code) | INDEX.md |
-| 2 | Golden Dataset | `module-8-01-golden-dataset` | 01_GOLDEN_DATASET.md |
-| 3 | Rule-Based Evals (Local) | `module-8-02-rule-based-local` | 02_RULE_BASED_LOCAL.md |
-| 4 | LLM-as-Judge (Local) | `module-8-03-llm-judge-local` | 03_LLM_JUDGE_LOCAL.md |
-| 5 | Introduction to Langfuse | `module-8-04-langfuse-setup` | — |
-| 6 | Manual Annotation | `module-8-05-manual-annotation` | 05_MANUAL_ANNOTATION.md |
-| 7 | Production Rule-Based | `module-8-06-rule-based-prod` | 06_RULE_BASED_PROD.md |
-| 8 | Production LLM Judge | `module-8-07-llm-judge-prod` | 07_LLM_JUDGE_PROD.md |
-| 9 | Span & Trace Analysis | `module-8-08-span-trace` | 08_SPAN_TRACE.md |
-| 10 | User Feedback | `module-8-09-user-feedback` | 09_USER_FEEDBACK.md |
+| 1 | Introduction to Agent Evals | — (no code) | 01_INTRO_TO_EVALS.md |
+| 2 | Golden Dataset | `module-8-01-golden-dataset` | 02_GOLDEN_DATASET.md |
+| 3 | Rule-Based Evals (Local) | `module-8-02-rule-based-local` | 03_RULE_BASED_LOCAL.md |
+| 4 | LLM-as-Judge (Local) | `module-8-03-llm-judge-local` | 04_LLM_JUDGE_LOCAL.md |
+| 5 | Manual Annotation | `module-8-04-manual-annotation` | 05_MANUAL_ANNOTATION.md |
+| 6 | Production Rule-Based | `module-8-05-rule-based-prod` | 06_RULE_BASED_PROD.md |
+| 7 | Production LLM Judge | `module-8-06-llm-judge-prod` | 07_LLM_JUDGE_PROD.md |
+| 8 | User Feedback | `module-8-07-user-feedback` | 08_USER_FEEDBACK.md |
 
 ---
 
@@ -141,29 +139,28 @@ git checkout module-8-prep-evals
 | 2 - Golden Dataset | `git checkout module-8-01-golden-dataset` |
 | 3 - Rule-Based Local | `git checkout module-8-02-rule-based-local` |
 | 4 - LLM Judge Local | `git checkout module-8-03-llm-judge-local` |
-| 5 - Langfuse Setup | `git checkout module-8-04-langfuse-setup` |
-| 6 - Manual Annotation | `git checkout module-8-05-manual-annotation` |
-| 7 - Rule-Based Prod | `git checkout module-8-06-rule-based-prod` |
-| 8 - LLM Judge Prod | `git checkout module-8-07-llm-judge-prod` |
-| 9 - Span/Trace | `git checkout module-8-08-span-trace` |
-| 10 - User Feedback | `git checkout module-8-09-user-feedback` |
+| 5 - Manual Annotation | `git checkout module-8-04-manual-annotation` |
+| 6 - Rule-Based Prod | `git checkout module-8-05-rule-based-prod` |
+| 7 - LLM Judge Prod | `git checkout module-8-06-llm-judge-prod` |
+| 8 - User Feedback | `git checkout module-8-07-user-feedback` |
 
 ---
 
 ## Strategy Documents Reference
 
-Strategy documents are numbered to match implementation order where applicable:
+Strategy documents are numbered to match video order:
 
-| File | Strategy | Used In Videos |
-|------|----------|----------------|
-| 01_GOLDEN_DATASET.md | Golden Dataset | Video 2 |
-| 02_RULE_BASED_LOCAL.md | Rule-Based (Local) | Video 3 |
-| 03_LLM_JUDGE_LOCAL.md | LLM Judge (Local) | Video 4 |
-| 05_MANUAL_ANNOTATION.md | Manual Annotation | Video 6 |
-| 06_RULE_BASED_PROD.md | Rule-Based (Prod) | Video 7 |
-| 07_LLM_JUDGE_PROD.md | LLM Judge (Prod) | Video 8 |
-| 08_SPAN_TRACE.md | Span/Trace | Video 9 |
-| 09_USER_FEEDBACK.md | User Feedback | Video 10 |
-| honorable_mention_implicit_feedback.md | Implicit Feedback | (Mentioned, not core) |
+| File | Strategy | Video |
+|------|----------|-------|
+| 01_INTRO_TO_EVALS.md | Introduction | Video 1 |
+| 02_GOLDEN_DATASET.md | Golden Dataset | Video 2 |
+| 03_RULE_BASED_LOCAL.md | Rule-Based (Local) | Video 3 |
+| 04_LLM_JUDGE_LOCAL.md | LLM Judge (Local) | Video 4 |
+| 05_MANUAL_ANNOTATION.md | Manual Annotation | Video 5 |
+| 06_RULE_BASED_PROD.md | Rule-Based (Prod) | Video 6 |
+| 07_LLM_JUDGE_PROD.md | LLM Judge (Prod) | Video 7 |
+| 08_USER_FEEDBACK.md | User Feedback | Video 8 |
+| honorable_mention_span_trace.md | Span/Trace | (Honorable mention) |
+| honorable_mention_implicit_feedback.md | Implicit Feedback | (Honorable mention) |
 | honorable_mention_ab_testing.md | A/B Testing | (Honorable mention) |
 | honorable_mention_cost_efficiency.md | Cost/Efficiency | (Honorable mention) |

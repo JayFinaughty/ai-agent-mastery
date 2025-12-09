@@ -108,12 +108,12 @@ pip install pydantic-evals
 | 2 | **Golden Dataset: Your First 10 Test Cases** | Local | `module-8-01-golden-dataset` |
 | 3 | **Rule-Based Evals: Deterministic Checks** | Local | `module-8-02-rule-based-local` |
 | 4 | **LLM-as-Judge: AI-Powered Scoring** | Local | `module-8-03-llm-judge-local` |
-| 5 | **Introduction to Langfuse** | Production | `module-8-04-langfuse-setup` |
-| 6 | **Manual Annotation: Expert Review** | Production | `module-8-05-manual-annotation` |
-| 7 | **Production Rule-Based Evals** | Production | `module-8-06-rule-based-prod` |
-| 8 | **Production LLM Judge** | Production | `module-8-07-llm-judge-prod` |
-| 9 | **Span & Trace Analysis** | Production | `module-8-08-span-trace` |
-| 10 | **User Feedback Collection** | Production | `module-8-09-user-feedback` |
+| 5 | **Manual Annotation: Expert Review** | Production | `module-8-04-manual-annotation` |
+| 6 | **Production Rule-Based Evals** | Production | `module-8-05-rule-based-prod` |
+| 7 | **Production LLM Judge** | Production | `module-8-06-llm-judge-prod` |
+| 8 | **User Feedback Collection** | Production | `module-8-07-user-feedback` |
+
+> **Note:** Langfuse setup was covered in Module 6. Video 5 (Manual Annotation) serves as the intro to Langfuse for evaluations.
 
 ---
 
@@ -263,10 +263,9 @@ Move to Langfuse when you have:
 | Manual Annotation | Expert quality assessment | Building training data, audits |
 | Rule-Based (Prod) | Safety, format compliance | Automated monitoring |
 | LLM Judge (Prod) | Quality at scale | When manual review doesn't scale |
-| Span/Trace | Execution correctness | Debugging, tool call validation |
 | User Feedback | Satisfaction | Once you have real users |
 
-> **Note on A/B Testing:** Comparing agent versions (different prompts, models, or configurations) is valuable but adds complexity. Langfuse supports experiments for this use case. We recommend mastering the core strategies above first, then exploring A/B testing as needed. See [08_AB_COMPARATIVE_TESTING.md](./08_AB_COMPARATIVE_TESTING.md) for details.
+> **Note on A/B Testing & Span/Trace:** These are covered as honorable mentions. See [honorable_mention_ab_testing.md](./honorable_mention_ab_testing.md) and [honorable_mention_span_trace.md](./honorable_mention_span_trace.md).
 
 ---
 
@@ -275,27 +274,28 @@ Move to Langfuse when you have:
 Detailed implementation plans for each strategy:
 
 ### Local Phase
-| # | Strategy | Document |
-|---|----------|----------|
-| — | Golden Dataset | [01_GOLDEN_DATASET.md](./01_GOLDEN_DATASET.md) |
-| — | Rule-Based (Local) | [02_RULE_BASED_LOCAL.md](./02_RULE_BASED_LOCAL.md) |
-| — | LLM Judge (Local) | [03_LLM_JUDGE_LOCAL.md](./03_LLM_JUDGE_LOCAL.md) |
+| Video | Strategy | Document |
+|-------|----------|----------|
+| 1 | Introduction | [01_INTRO_TO_EVALS.md](./01_INTRO_TO_EVALS.md) |
+| 2 | Golden Dataset | [02_GOLDEN_DATASET.md](./02_GOLDEN_DATASET.md) |
+| 3 | Rule-Based (Local) | [03_RULE_BASED_LOCAL.md](./03_RULE_BASED_LOCAL.md) |
+| 4 | LLM Judge (Local) | [04_LLM_JUDGE_LOCAL.md](./04_LLM_JUDGE_LOCAL.md) |
 
 ### Production Phase
-| # | Strategy | Document |
-|---|----------|----------|
-| — | Manual Annotation | [05_MANUAL_ANNOTATION.md](./05_MANUAL_ANNOTATION.md) |
-| — | Rule-Based (Prod) | [06_RULE_BASED_PROD.md](./06_RULE_BASED_PROD.md) |
-| — | LLM Judge (Prod) | [07_LLM_JUDGE_PROD.md](./07_LLM_JUDGE_PROD.md) |
-| — | Span/Trace | [08_SPAN_TRACE.md](./08_SPAN_TRACE.md) |
-| — | User Feedback | [09_USER_FEEDBACK.md](./09_USER_FEEDBACK.md) |
-| — | Implicit Feedback | [honorable_mention_implicit_feedback.md](./honorable_mention_implicit_feedback.md) |
+| Video | Strategy | Document |
+|-------|----------|----------|
+| 5 | Manual Annotation | [05_MANUAL_ANNOTATION.md](./05_MANUAL_ANNOTATION.md) |
+| 6 | Rule-Based (Prod) | [06_RULE_BASED_PROD.md](./06_RULE_BASED_PROD.md) |
+| 7 | LLM Judge (Prod) | [07_LLM_JUDGE_PROD.md](./07_LLM_JUDGE_PROD.md) |
+| 8 | User Feedback | [08_USER_FEEDBACK.md](./08_USER_FEEDBACK.md) |
 
-### Advanced (Honorable Mention)
-| # | Strategy | Document |
-|---|----------|----------|
-| — | A/B Testing | [honorable_mention_ab_testing.md](./honorable_mention_ab_testing.md) |
-| — | Cost/Efficiency | [honorable_mention_cost_efficiency.md](./honorable_mention_cost_efficiency.md) |
+### Honorable Mentions
+| Strategy | Document |
+|----------|----------|
+| Span/Trace | [honorable_mention_span_trace.md](./honorable_mention_span_trace.md) |
+| Implicit Feedback | [honorable_mention_implicit_feedback.md](./honorable_mention_implicit_feedback.md) |
+| A/B Testing | [honorable_mention_ab_testing.md](./honorable_mention_ab_testing.md) |
+| Cost/Efficiency | [honorable_mention_cost_efficiency.md](./honorable_mention_cost_efficiency.md) |
 
 ### Overview
 | Document | Purpose |

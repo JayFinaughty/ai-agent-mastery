@@ -41,12 +41,6 @@ This mirrors how a real team adopts evaluations: start simple, add complexity as
 │                                                       │                 │
 │  No Langfuse needed!                                  ▼                 │
 │  Run from terminal.                            ┌─────────────┐         │
-│                                                │ SPAN/TRACE  │         │
-│                                                │  Analysis   │         │
-│                                                └──────┬──────┘         │
-│                                                       │                 │
-│                                                       ▼                 │
-│                                                ┌─────────────┐         │
 │                                                │    USER     │         │
 │                                                │  FEEDBACK   │         │
 │                                                │  (Ratings)  │         │
@@ -74,14 +68,14 @@ This mirrors how a real team adopts evaluations: start simple, add complexity as
 | **Manual Annotation** | Expert Quality | Annotation UI |
 | **Rule-Based (Prod)** | Safety, Compliance | Scores API |
 | **LLM Judge (Prod)** | Quality at Scale | Built-in Judge |
-| **Span/Trace** | Execution Flow | Traces |
 | **User Feedback** | Satisfaction | Scores API |
 
-### Not in Core Curriculum
+### Honorable Mentions (Not in Core Curriculum)
 
 | Strategy | Status | Notes |
 |----------|--------|-------|
-| **Implicit Feedback** | Mentioned | Behavioral analysis, app DB only |
+| **Span/Trace** | Honorable mention | See [honorable_mention_span_trace.md](./honorable_mention_span_trace.md) |
+| **Implicit Feedback** | Honorable mention | See [honorable_mention_implicit_feedback.md](./honorable_mention_implicit_feedback.md) |
 | **A/B Testing** | Honorable mention | See [honorable_mention_ab_testing.md](./honorable_mention_ab_testing.md) |
 | **Cost/Efficiency** | Honorable mention | See [honorable_mention_cost_efficiency.md](./honorable_mention_cost_efficiency.md) |
 
@@ -116,16 +110,15 @@ This mirrors how a real team adopts evaluations: start simple, add complexity as
 ### Combined Matrix
 
 ```
-                          │ Pydantic │ Langfuse │ Phase
-──────────────────────────┼──────────┼──────────┼────────────
-Golden Dataset            │  ✅      │  ✅      │ Local
-Rule-Based (Local)        │  ✅      │  —       │ Local
-LLM Judge (Local)         │  ✅      │  —       │ Local
-Rule-Based (Prod)         │  ✅      │  ⚠️      │ Production
-LLM Judge (Prod)          │  ✅      │  ✅      │ Production
-Manual Annotation         │  ⚠️      │  ✅      │ Production
-Span/Trace                │  ✅      │  ✅      │ Production
-User Feedback             │  ❌      │  ✅      │ Production
+                          │ Pydantic │ Langfuse │ Phase       │ Video
+──────────────────────────┼──────────┼──────────┼─────────────┼───────
+Golden Dataset            │  ✅      │  ✅      │ Local       │ 2
+Rule-Based (Local)        │  ✅      │  —       │ Local       │ 3
+LLM Judge (Local)         │  ✅      │  —       │ Local       │ 4
+Manual Annotation         │  ⚠️      │  ✅      │ Production  │ 5
+Rule-Based (Prod)         │  ✅      │  ⚠️      │ Production  │ 6
+LLM Judge (Prod)          │  ✅      │  ✅      │ Production  │ 7
+User Feedback             │  ❌      │  ✅      │ Production  │ 8
 ```
 
 ---
@@ -147,18 +140,18 @@ Start simple. No external services required.
 python run_evals.py
 ```
 
-### Phase 2: Production (Videos 5-10)
+### Phase 2: Production (Videos 5-8)
 
 Add Langfuse for real user data and observability.
 
 | Video | Feature | What You Build |
 |-------|---------|----------------|
-| 5 | Langfuse Setup | Tracing integration, score sync |
-| 6 | Manual Annotation | Expert review workflow via Langfuse UI |
-| 7 | Rule-Based (Prod) | Sync rule scores to Langfuse |
-| 8 | LLM Judge (Prod) | Async scoring on production traces |
-| 9 | Span/Trace | Trace-based evaluation, tool flow analysis |
-| 10 | User Feedback | Frontend widget, feedback collection |
+| 5 | Manual Annotation | Expert review workflow via Langfuse UI |
+| 6 | Rule-Based (Prod) | Sync rule scores to Langfuse |
+| 7 | LLM Judge (Prod) | Async scoring on production traces |
+| 8 | User Feedback | Frontend widget, feedback collection |
+
+> **Note:** Langfuse setup was covered in Module 6. Video 5 includes a brief intro to Langfuse for evaluations.
 
 ---
 
@@ -171,11 +164,10 @@ Add Langfuse for real user data and observability.
     │  LOCAL DEV            →        PRODUCTION   │
     │  ─────────                     ──────────   │
     │                                              │
-    │  ✅ Golden Dataset             ✅ User       │
-    │  ✅ Rule-Based (local)         ✅ Manual     │
+    │  ✅ Golden Dataset             ✅ Manual     │
+    │  ✅ Rule-Based (local)         ✅ Rule-Based │
     │  ✅ LLM Judge (local)          ✅ LLM Judge  │
-    │                                ✅ Span/Trace │
-    │                                ✅ Rule-Based │
+    │                                ✅ User       │
     │                                              │
     │  "Does it work?"       →    "Is it good?"   │
     │                                              │
@@ -190,15 +182,16 @@ Detailed implementation plans for each strategy:
 
 | File | Strategy | Phase |
 |------|----------|-------|
-| [09_USER_FEEDBACK.md](./09_USER_FEEDBACK.md) | User Feedback | Production |
-| [honorable_mention_implicit_feedback.md](./honorable_mention_implicit_feedback.md) | Implicit Feedback | (Reference) |
+| [01_INTRO_TO_EVALS.md](./01_INTRO_TO_EVALS.md) | Introduction | Conceptual |
+| [02_GOLDEN_DATASET.md](./02_GOLDEN_DATASET.md) | Golden Dataset | Local |
+| [03_RULE_BASED_LOCAL.md](./03_RULE_BASED_LOCAL.md) | Rule-Based (Local) | Local |
+| [04_LLM_JUDGE_LOCAL.md](./04_LLM_JUDGE_LOCAL.md) | LLM Judge (Local) | Local |
 | [05_MANUAL_ANNOTATION.md](./05_MANUAL_ANNOTATION.md) | Manual Annotation | Production |
-| [03_LLM_JUDGE_LOCAL.md](./03_LLM_JUDGE_LOCAL.md) | LLM Judge (Local) | Local |
-| [07_LLM_JUDGE_PROD.md](./07_LLM_JUDGE_PROD.md) | LLM Judge (Prod) | Production |
-| [02_RULE_BASED_LOCAL.md](./02_RULE_BASED_LOCAL.md) | Rule-Based (Local) | Local |
 | [06_RULE_BASED_PROD.md](./06_RULE_BASED_PROD.md) | Rule-Based (Prod) | Production |
-| [01_GOLDEN_DATASET.md](./01_GOLDEN_DATASET.md) | Golden Dataset | Local |
-| [08_SPAN_TRACE.md](./08_SPAN_TRACE.md) | Span/Trace | Production |
+| [07_LLM_JUDGE_PROD.md](./07_LLM_JUDGE_PROD.md) | LLM Judge (Prod) | Production |
+| [08_USER_FEEDBACK.md](./08_USER_FEEDBACK.md) | User Feedback | Production |
+| [honorable_mention_span_trace.md](./honorable_mention_span_trace.md) | Span/Trace | (Honorable Mention) |
+| [honorable_mention_implicit_feedback.md](./honorable_mention_implicit_feedback.md) | Implicit Feedback | (Honorable Mention) |
 | [honorable_mention_ab_testing.md](./honorable_mention_ab_testing.md) | A/B Testing | (Honorable Mention) |
 | [honorable_mention_cost_efficiency.md](./honorable_mention_cost_efficiency.md) | Cost/Efficiency | (Honorable Mention) |
 
