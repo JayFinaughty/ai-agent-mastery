@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """
-Golden Dataset Evaluation Runner
+Golden Dataset Evaluation Runner with Rule-Based Tool Verification
 
-This script evaluates the agent against a curated set of test cases.
-It demonstrates the simplest way to start with agent evaluations.
+Video 3: Rule-Based Evals (Local) with HasMatchingSpan
+
+This script evaluates the agent against a curated set of test cases,
+including tool call verification using OpenTelemetry spans.
 
 Usage:
     cd backend_agent_api
@@ -30,11 +32,32 @@ from pydantic_evals import Dataset
 env_path = Path(__file__).parent.parent.parent / ".env"
 load_dotenv(env_path, override=True)
 
+# ============================================================
+# LOGFIRE CONFIGURATION FOR TOOL SPAN TRACKING (Video 3)
+# ============================================================
+# Configure logfire BEFORE importing the agent to ensure spans are captured.
+# This enables HasMatchingSpan to check tool calls via OpenTelemetry spans.
+#
+# Note: Tool names are stored in the gen_ai.tool.name span ATTRIBUTE,
+# not in the span name itself. Use has_attributes in HasMatchingSpan queries.
+
+import logfire
+
+logfire.configure(
+    service_name='agent_evals',
+    send_to_logfire=False,  # Local only - no cloud connection needed
+)
+
+# Instrument pydantic-ai to generate spans for tool calls
+logfire.instrument_pydantic_ai()
+
+# ============================================================
+
 from agent import agent, AgentDeps
 from clients import get_agent_clients
 
 # Import custom evaluators for YAML deserialization
-from evals.evaluators import ContainsAny
+from evals.evaluators import ContainsAny, NoPII, NoForbiddenWords
 
 # Configuration
 PASS_THRESHOLD = 0.8  # 80% of cases must pass
@@ -91,7 +114,7 @@ async def main() -> int:
 
     # Load dataset, registering our custom evaluators
     dataset = Dataset[dict, str].from_file(
-        dataset_path, custom_evaluator_types=[ContainsAny]
+        dataset_path, custom_evaluator_types=[ContainsAny, NoPII, NoForbiddenWords]
     )
 
     print("\n" + "=" * 60)
