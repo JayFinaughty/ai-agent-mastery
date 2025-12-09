@@ -1,14 +1,14 @@
 # Build stage
-FROM node:18-alpine as builder
+FROM node:18-slim as builder
 
 # Set working directory
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy package.json only (not the lockfile)
+COPY package.json ./
 
-# Install all dependencies (including dev dependencies for build)
-RUN npm ci
+# Install all dependencies fresh (this generates native bindings for the container's architecture)
+RUN npm install --legacy-peer-deps
 
 # Copy source code
 COPY . .

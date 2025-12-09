@@ -44,6 +44,7 @@
     "@radix-ui/react-tooltip": "^1.1.4",
     "@supabase/supabase-js": "^2.49.4",
     "@tanstack/react-query": "^5.56.2",
+    "langfuse": "^3.38.6",
     "@types/uuid": "^9.0.8",
     "caniuse-lite": "^1.0.30001718",
     "class-variance-authority": "^0.7.1",
