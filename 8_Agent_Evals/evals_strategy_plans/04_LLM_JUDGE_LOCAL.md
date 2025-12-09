@@ -27,7 +27,7 @@
 │                                              │   but verbose"     │   │
 │                                              └─────────────────────┘   │
 │                                                                         │
-│   Costs: ~$0.01-0.05 per evaluation (GPT-4o)                           │
+│   Costs: ~$0.002-0.01 per evaluation (GPT-5-mini)                       │
 │                                                                         │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
@@ -65,7 +65,7 @@ from pydantic_evals.evaluators import LLMJudge
 
 LLMJudge(
     rubric="Response is helpful and accurate",
-    model="openai:gpt-4o",          # Judge model
+    model="openai:gpt-5-mini",       # Judge model (cost-effective)
     include_input=True,              # Show input to judge
     include_expected_output=False,   # Don't show expected
 )
@@ -76,7 +76,7 @@ LLMJudge(
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `rubric` | str | required | Evaluation criteria |
-| `model` | str | `openai:gpt-4o` | Judge model |
+| `model` | str | `openai:gpt-5-mini` | Judge model |
 | `include_input` | bool | `False` | Include user query |
 | `include_expected_output` | bool | `False` | Include expected answer |
 | `model_settings` | ModelSettings | `None` | Temperature, etc. |
@@ -114,7 +114,8 @@ In Video 3, you added `HasMatchingSpan` to verify tool calls. Now we add `LLMJud
         case_sensitive: false
     - HasMatchingSpan:
         query:
-          name_contains: "retrieve_relevant_documents"
+          has_attributes:
+            gen_ai.tool.name: "retrieve_relevant_documents"
 
 # AFTER (Video 4): Add LLMJudge for quality
 - name: document_search
@@ -126,7 +127,8 @@ In Video 3, you added `HasMatchingSpan` to verify tool calls. Now we add `LLMJud
         case_sensitive: false
     - HasMatchingSpan:
         query:
-          name_contains: "retrieve_relevant_documents"
+          has_attributes:
+            gen_ai.tool.name: "retrieve_relevant_documents"
     # NEW: Subjective quality assessment
     - LLMJudge:
         rubric: |
@@ -249,7 +251,8 @@ cases:
           case_sensitive: false
       - HasMatchingSpan:
           query:
-            name_contains: "retrieve_relevant_documents"
+            has_attributes:
+              gen_ai.tool.name: "retrieve_relevant_documents"
       # NEW: RAG quality assessment
       - LLMJudge:
           rubric: |
@@ -267,7 +270,8 @@ cases:
     evaluators:
       - HasMatchingSpan:
           query:
-            name_contains: "list_documents"
+            has_attributes:
+              gen_ai.tool.name: "list_documents"
 
   # ============================================
   # CALCULATIONS
@@ -289,7 +293,8 @@ cases:
       - Contains: "120"
       - HasMatchingSpan:
           query:
-            name_contains: "execute_code"
+            has_attributes:
+              gen_ai.tool.name: "execute_code"
       # NEW: Explanation quality
       - LLMJudge:
           rubric: "Response explains what factorial means and shows the calculation"
@@ -310,7 +315,8 @@ cases:
       - HasMatchingSpan:
           query:
             not_:
-              name_contains: "execute_code"
+              has_attributes:
+                gen_ai.tool.name: "execute_code"
       # NEW: Refusal quality assessment
       - LLMJudge:
           rubric: |
@@ -332,7 +338,8 @@ cases:
       - HasMatchingSpan:
           query:
             not_:
-              name_contains: "web_search"
+              has_attributes:
+                gen_ai.tool.name: "web_search"
 
   # ============================================
   # WEB SEARCH
@@ -345,7 +352,8 @@ cases:
     evaluators:
       - HasMatchingSpan:
           query:
-            name_contains: "web_search"
+            has_attributes:
+              gen_ai.tool.name: "web_search"
 
 # ============================================
 # GLOBAL EVALUATORS (unchanged)
@@ -406,8 +414,9 @@ Pass Rate: 100.0%
 ### Cost Note
 
 With LLMJudge, you're now making API calls to a judge model. For a 10-case dataset with 5 cases using LLMJudge:
-- **gpt-4o-mini:** ~$0.005 total (very cheap)
-- **gpt-4o:** ~$0.05-0.10 total (still affordable for local testing)
+- **gpt-5-nano:** ~$0.002 total (extremely cheap)
+- **gpt-5-mini:** ~$0.01 total (very affordable)
+- **gpt-5:** ~$0.05-0.10 total (still affordable for local testing)
 
 ---
 
@@ -504,7 +513,8 @@ evaluators:
       value: "document"
   - HasMatchingSpan:
       query:
-        name_contains: "retrieve_relevant_documents"
+        has_attributes:
+          gen_ai.tool.name: "retrieve_relevant_documents"
 
   # Expensive LLM judge last
   - LLMJudge:
@@ -565,20 +575,25 @@ evaluators:
 ## Model Selection
 
 ```yaml
-# Budget-friendly for simple checks
+# Ultra budget-friendly for simple checks
 - LLMJudge:
     rubric: "Contains profanity"
-    model: "openai:gpt-4o-mini"
+    model: "openai:gpt-5-nano"
 
-# Default (balanced quality/cost)
+# Budget-friendly (recommended default)
 - LLMJudge:
     rubric: "Response is helpful"
-    model: "openai:gpt-4o"
+    model: "openai:gpt-5-mini"
 
-# Premium for nuanced evaluation
+# High quality for nuanced evaluation
 - LLMJudge:
     rubric: "Deep technical accuracy assessment"
-    model: "anthropic:claude-sonnet-4-20250514"
+    model: "openai:gpt-5"
+
+# Premium for most demanding evaluations
+- LLMJudge:
+    rubric: "Complex multi-dimensional assessment"
+    model: "anthropic:claude-opus-4-5-20250514"
 ```
 
 ---
@@ -587,13 +602,17 @@ evaluators:
 
 | Model | Input | Output | ~Cost per Eval |
 |-------|-------|--------|----------------|
-| gpt-4o-mini | $0.15/M | $0.60/M | ~$0.001 |
-| gpt-4o | $2.50/M | $10/M | ~$0.01-0.02 |
-| claude-sonnet | $3/M | $15/M | ~$0.02-0.03 |
+| gpt-5-nano | $0.05/M | $0.40/M | ~$0.0005 |
+| gpt-5-mini | $0.25/M | $2.00/M | ~$0.002 |
+| gpt-5 | $1.25/M | $10/M | ~$0.01 |
+| claude-opus-4.5 | $15/M | $75/M | ~$0.05 |
 
 **For a 10-case golden dataset:**
-- gpt-4o-mini: ~$0.01 total
-- gpt-4o: ~$0.10-0.20 total
+- gpt-5-nano: ~$0.005 total
+- gpt-5-mini: ~$0.02 total
+- gpt-5: ~$0.10 total
+
+**Note:** GPT-5 offers 90% discount on cached tokens, making repeated evaluations even cheaper.
 
 ---
 
@@ -613,7 +632,8 @@ evaluators:
   # 2. Tool verification (free, OpenTelemetry-based)
   - HasMatchingSpan:
       query:
-        name_contains: "retrieve_relevant_documents"
+        has_attributes:
+          gen_ai.tool.name: "retrieve_relevant_documents"
 
   # 3. AI judgment (paid, only runs if above pass)
   - LLMJudge:
@@ -652,19 +672,25 @@ rubric: |
     include_input: true  # Judge sees what user asked
 ```
 
-### 5. Use gpt-4o-mini for Simple Checks
+### 5. Use gpt-5-nano or gpt-5-mini for Simple Checks
 
 ```yaml
-# Budget-friendly for binary yes/no rubrics
+# Ultra budget-friendly for binary yes/no rubrics
 - LLMJudge:
     rubric: "Response contains profanity or inappropriate content"
-    model: "openai:gpt-4o-mini"
+    model: "openai:gpt-5-nano"
 
-# Use gpt-4o for nuanced multi-point evaluations
+# Use gpt-5-mini for most evaluations (best cost/quality balance)
 - LLMJudge:
     rubric: |
       Evaluate accuracy, completeness, and clarity...
-    model: "openai:gpt-4o"
+    model: "openai:gpt-5-mini"
+
+# Use gpt-5 for complex multi-dimensional evaluations
+- LLMJudge:
+    rubric: |
+      Deep technical assessment with nuanced criteria...
+    model: "openai:gpt-5"
 ```
 
 ### 6. Name Your Evaluations for Clear Reports

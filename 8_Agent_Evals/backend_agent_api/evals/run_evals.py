@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Golden Dataset Evaluation Runner with Rule-Based Tool Verification
+Golden Dataset Evaluation Runner with LLM Judge
 
-Video 3: Rule-Based Evals (Local) with HasMatchingSpan
+Video 4: LLM Judge (Local) with LLMJudge evaluators
 
 This script evaluates the agent against a curated set of test cases,
-including tool call verification using OpenTelemetry spans.
+including tool call verification and AI-powered quality assessment.
 
 Usage:
     cd backend_agent_api
@@ -31,6 +31,26 @@ from pydantic_evals import Dataset
 # Load environment variables from parent directory (8_Agent_Evals/.env)
 env_path = Path(__file__).parent.parent.parent / ".env"
 load_dotenv(env_path, override=True)
+
+# ============================================================
+# VIDEO 4: Configure LLMJudge to use the same model as the agent
+# ============================================================
+# LLMJudge needs to use the configured LLM_API_KEY, not OPENAI_API_KEY.
+# We configure the default judge model to use the same provider as our agent.
+
+from pydantic_evals.evaluators.llm_as_a_judge import set_default_judge_model
+from pydantic_ai.models.openai import OpenAIChatModel
+from pydantic_ai.providers.openai import OpenAIProvider
+
+# Configure the judge model to use the same API key as the agent
+judge_model = OpenAIChatModel(
+    os.getenv('LLM_CHOICE', 'gpt-4o-mini'),
+    provider=OpenAIProvider(
+        base_url=os.getenv('LLM_BASE_URL', 'https://api.openai.com/v1'),
+        api_key=os.getenv('LLM_API_KEY'),
+    )
+)
+set_default_judge_model(judge_model)
 
 # ============================================================
 # LOGFIRE CONFIGURATION FOR TOOL SPAN TRACKING (Video 3)
