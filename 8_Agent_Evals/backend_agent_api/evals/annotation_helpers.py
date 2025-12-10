@@ -58,6 +58,36 @@ def get_langfuse_client():
         )
 
 
+def _fetch_scores_for_trace(langfuse, score_ids: list[str]) -> list[dict]:
+    """
+    Fetch score details for a list of score IDs.
+
+    In Langfuse SDK v3, trace.scores is a list of score IDs (strings),
+    not score objects. This helper fetches the actual score details.
+
+    Args:
+        langfuse: Langfuse client
+        score_ids: List of score ID strings
+
+    Returns:
+        List of score dictionaries with 'name' and 'value' keys
+    """
+    scores = []
+    for score_id in score_ids:
+        try:
+            # Use score_v_2.get to fetch individual score by ID
+            score = langfuse.api.score_v_2.get(score_id)
+            scores.append({
+                "name": score.name,
+                "value": score.value,
+                "id": score.id
+            })
+        except Exception:
+            # Skip scores that can't be fetched
+            continue
+    return scores
+
+
 def export_annotations_to_golden_dataset(
     min_accuracy: int = 4,
     output_path: Optional[Path] = None,
@@ -104,11 +134,14 @@ def export_annotations_to_golden_dataset(
     golden_cases = []
     for trace in traces.data:
         # Check if trace has accuracy score meeting threshold
+        # In Langfuse SDK v3, trace.scores is a list of score IDs (strings)
         accuracy_score = None
-        for score in (trace.scores or []):
-            if score.name == "accuracy":
-                accuracy_score = score.value
-                break
+        if trace.scores:
+            scores = _fetch_scores_for_trace(langfuse, trace.scores)
+            for score in scores:
+                if score["name"] == "accuracy":
+                    accuracy_score = score["value"]
+                    break
 
         if accuracy_score is not None and accuracy_score >= min_accuracy:
             # Extract input from trace
@@ -173,12 +206,15 @@ def compare_judge_to_expert(limit: int = 500) -> dict:
         judge_score = None
         expert_score = None
 
-        for score in (trace.scores or []):
-            if score.name == "llm_judge_score":
-                judge_score = score.value
-            elif score.name == "accuracy":
-                # Normalize 1-5 scale to 0-1 for comparison
-                expert_score = score.value / 5.0
+        # In Langfuse SDK v3, trace.scores is a list of score IDs (strings)
+        if trace.scores:
+            scores = _fetch_scores_for_trace(langfuse, trace.scores)
+            for score in scores:
+                if score["name"] == "llm_judge_score":
+                    judge_score = score["value"]
+                elif score["name"] == "accuracy":
+                    # Normalize 1-5 scale to 0-1 for comparison
+                    expert_score = score["value"] / 5.0
 
         if judge_score is not None and expert_score is not None:
             comparisons.append({
@@ -246,11 +282,14 @@ def export_training_data(
     training_data = []
     for trace in traces.data:
         # Check if trace has high accuracy score
+        # In Langfuse SDK v3, trace.scores is a list of score IDs (strings)
         accuracy_score = None
-        for score in (trace.scores or []):
-            if score.name == "accuracy":
-                accuracy_score = score.value
-                break
+        if trace.scores:
+            scores = _fetch_scores_for_trace(langfuse, trace.scores)
+            for score in scores:
+                if score["name"] == "accuracy":
+                    accuracy_score = score["value"]
+                    break
 
         if accuracy_score is not None and accuracy_score >= min_accuracy:
             if trace.input and trace.output:
