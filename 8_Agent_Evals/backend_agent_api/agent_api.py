@@ -24,6 +24,13 @@ from configure_langfuse import configure_langfuse
 # Import production rule-based evaluators (Video 6)
 from evals.prod_rules import run_production_evals
 
+# Import production LLM judge (Video 7)
+from evals.prod_judge import run_production_judge
+import random
+
+# Sampling rate for LLM judge (Video 7) - evaluate 10% of requests
+JUDGE_SAMPLE_RATE = 0.1
+
 # Import database utility functions
 from db_utils import (
     fetch_conversation_history,
@@ -344,6 +351,17 @@ async def pydantic_agent(request: AgentRequest, user: Dict[str, Any] = Depends(v
                 if production_trace_id:
                     asyncio.create_task(
                         run_production_evals(
+                            trace_id=production_trace_id,
+                            output=full_response,
+                            inputs={"query": request.query}
+                        )
+                    )
+
+                # Run production LLM judge (async, non-blocking, sampled)
+                # Video 7: AI-powered quality scoring on 10% of requests
+                if production_trace_id and random.random() < JUDGE_SAMPLE_RATE:
+                    asyncio.create_task(
+                        run_production_judge(
                             trace_id=production_trace_id,
                             output=full_response,
                             inputs={"query": request.query}

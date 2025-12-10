@@ -10,21 +10,23 @@
 
 **Building on Video 4**: You used `LLMJudge` in your golden dataset. Now we run AI evaluation on real production data.
 
+**Building on Video 6**: Like `prod_rules.py`, we run evaluation async (non-blocking) and sync scores to Langfuse using the low-level API.
+
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                     LLM-AS-JUDGE (PRODUCTION)                           │
 │                                                                         │
-│   Production Trace              Langfuse                                │
-│   ────────────────              ────────                                │
+│   Production Trace              Judge                  Langfuse         │
+│   ────────────────              ─────                  ────────         │
 │                                                                         │
 │   ┌─────────────┐         ┌─────────────┐         ┌─────────────┐      │
-│   │   Agent     │         │  Built-in   │         │   Scores    │      │
-│   │   Response  │────────►│  Evaluator  │────────►│   on Trace  │      │
-│   │   + Trace   │         │  (or custom)│         │             │      │
+│   │   Agent     │         │  pydantic-ai│         │   Scores    │      │
+│   │   Response  │────────►│  Judge      │────────►│   on Trace  │      │
+│   │   + Trace   │  async  │  (GPT-5)    │  sync   │             │      │
 │   └─────────────┘         └─────────────┘         └─────────────┘      │
 │                                                                         │
-│   Option 1: Langfuse built-in evaluators (no code)                     │
-│   Option 2: Custom pydantic-ai judge (more control)                    │
+│   Option 1: Langfuse built-in evaluators (no code, UI config)          │
+│   Option 2: Custom pydantic-ai judge (more control, code-based)        │
 │                                                                         │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
@@ -32,19 +34,21 @@
 ## What You'll Learn in This Video
 
 1. How to use Langfuse's built-in LLM evaluators (no code)
-2. How to build a custom judge with pydantic-ai
-3. How to run evaluation async (non-blocking)
+2. How to build a custom judge with pydantic-ai (like Video 4, but for production)
+3. How to run evaluation async (non-blocking) using the pattern from Video 6
 4. How to sample traces for cost control
-5. How to monitor quality trends in Langfuse
+5. How to monitor quality trends in Langfuse dashboard
 
-## Difference from Local
+## Difference from Local (Video 4)
 
 | Aspect | Local (Video 4) | Production (Video 7) |
 |--------|-----------------|----------------------|
-| **Tool** | pydantic-evals `LLMJudge` | Langfuse built-in or pydantic-ai |
+| **Evaluator** | pydantic-evals `LLMJudge` | pydantic-ai `Agent` with structured output |
 | **Data** | Golden dataset (10 cases) | Production traces (1000s) |
-| **Output** | Terminal report | Langfuse dashboard |
+| **Output** | Terminal report | Langfuse dashboard scores |
+| **Execution** | Sync (blocking) | Async (fire-and-forget) |
 | **Cost** | Pay per eval run | Sample to control costs |
+| **Model** | `openai:gpt-5-mini` | `openai:gpt-5-mini` (same!) |
 
 ---
 
@@ -52,7 +56,7 @@
 
 Langfuse provides pre-built evaluators — no code required.
 
-### Available Evaluators
+### Available Evaluator Templates
 
 | Evaluator | What it Checks |
 |-----------|----------------|
@@ -68,9 +72,9 @@ Langfuse provides pre-built evaluators — no code required.
 1. Go to **Langfuse → Evaluators → "+ Set up Evaluator"**
 2. Select a template (e.g., "Helpfulness")
 3. Configure:
-   - **Model**: gpt-4o or gpt-4o-mini
+   - **Model**: GPT-5-mini or GPT-5 (configure in LLM Connections first)
    - **Sample rate**: 10% (to control costs)
-   - **Variable mapping**:
+   - **Variable mapping** (using JSONPath):
      - `input` → `{{trace.input}}`
      - `output` → `{{trace.output}}`
 4. Save and enable
@@ -81,37 +85,86 @@ Langfuse provides pre-built evaluators — no code required.
 
 Each evaluated trace gets a score:
 - `helpfulness`: 0.0-1.0
-- Reason explaining the score
+- Reason explaining the score (chain-of-thought)
+- Full trace of the evaluation itself (for debugging)
 
 Filter in Langfuse: `helpfulness < 0.5` to find low-quality responses.
 
+### Execution Monitoring
+
+Langfuse provides visibility into evaluator execution:
+- View exact prompts sent to the judge
+- See model responses with reasoning
+- Track token usage and costs
+- Monitor status (Completed, Error, Delayed, Pending)
+
 ---
 
-## Option 2: Custom pydantic-ai Judge
+## Option 2: Custom pydantic-ai Judge (Recommended for Control)
 
-For domain-specific evaluation, build your own judge.
+For domain-specific evaluation with full control, build your own judge using pydantic-ai.
+
+### Why Custom?
+
+- **Domain-specific rubrics**: Tailor evaluation to your use case
+- **Multi-dimension scoring**: Evaluate multiple aspects in one call
+- **Consistent with Video 4**: Same model (GPT-5-mini), similar patterns
+- **Full visibility**: Debug and iterate on your rubrics
 
 ### Step 1: Create Judge Agent
 
 ```python
 # backend_agent_api/evals/prod_judge.py
+"""
+Production LLM Judge - Video 7
 
-from langfuse import Langfuse
+AI-powered quality scoring on production traces using pydantic-ai.
+Follows the same async pattern as prod_rules.py (Video 6).
+
+Model: Uses GPT-5-mini for cost efficiency (same as Video 4 LLMJudge).
+
+Usage:
+    from evals.prod_judge import run_production_judge
+
+    # Inside agent_api.py, after getting trace_id:
+    asyncio.create_task(
+        run_production_judge(trace_id, output, {"query": user_query})
+    )
+
+Langfuse Scores Created:
+    - llm_judge_score: 0.0-1.0 quality score
+    - llm_judge_passed: 1 if score >= 0.7, 0 otherwise
+"""
+
+import os
+from dataclasses import dataclass
+from typing import Optional
+
 from pydantic import BaseModel
 from pydantic_ai import Agent
-
-langfuse = Langfuse()
+from pydantic_ai.models.openai import OpenAIChatModel
+from pydantic_ai.providers.openai import OpenAIProvider
 
 
 class JudgeResult(BaseModel):
     """Structured output from the judge."""
+
     score: float  # 0.0 to 1.0
     passed: bool  # True if score >= 0.7
-    reason: str   # Explanation
+    reason: str   # Brief explanation (1-2 sentences)
 
+
+# Configure judge model to use same API as agent (from Video 4 pattern)
+judge_model = OpenAIChatModel(
+    "gpt-5-mini",  # Cost-effective, same as Video 4
+    provider=OpenAIProvider(
+        base_url=os.getenv("LLM_BASE_URL", "https://api.openai.com/v1"),
+        api_key=os.getenv("LLM_API_KEY"),
+    ),
+)
 
 judge_agent = Agent(
-    model="openai:gpt-4o-mini",  # Use mini for cost efficiency
+    model=judge_model,
     output_type=JudgeResult,
     system_prompt="""You are an AI quality evaluator.
 
@@ -125,47 +178,140 @@ Return:
 - passed: true if score >= 0.7
 - reason: Brief explanation (1-2 sentences)
 
-Be concise in your reasoning."""
+Be concise in your reasoning.""",
 )
 
 
-async def evaluate_trace(trace_id: str):
-    """Evaluate a trace and attach score to Langfuse."""
+@dataclass
+class ProductionJudgeEvaluator:
+    """
+    Runs LLM judge and syncs scores to Langfuse.
 
-    # Fetch trace
-    trace = langfuse.get_trace(trace_id)
+    Follows the same pattern as ProductionRuleEvaluator from Video 6.
+    Uses pydantic-ai Agent instead of pydantic-evals LLMJudge for
+    more control over the evaluation prompt and output format.
+    """
 
-    if not trace.output:
+    sample_rate: float = 0.1  # Default: evaluate 10% of requests
+
+    async def evaluate_and_sync(
+        self,
+        trace_id: str,
+        output: str,
+        inputs: Optional[dict] = None,
+    ) -> Optional[JudgeResult]:
+        """
+        Run LLM judge and sync scores to Langfuse.
+
+        Args:
+            trace_id: Langfuse trace ID (hex string)
+            output: The agent's response text to evaluate
+            inputs: Optional dict with input data (e.g., {"query": "..."})
+
+        Returns:
+            JudgeResult if evaluation ran, None if skipped or failed
+        """
+        try:
+            from langfuse import Langfuse
+            from langfuse.api.resources.score.types import CreateScoreRequest
+
+            langfuse = Langfuse()
+        except Exception as e:
+            print(f"[prod_judge] Failed to get Langfuse client: {e}")
+            return None
+
+        # Build evaluation prompt
+        query = inputs.get("query", "Unknown") if inputs else "Unknown"
+        prompt = f"""User Query: {query}
+
+Agent Response: {output}
+
+Evaluate this response."""
+
+        try:
+            # Run the judge
+            result = await judge_agent.run(prompt)
+            judge_output = result.output
+
+            # Sync scores to Langfuse using low-level API (same as Video 6)
+            langfuse.api.score.create(
+                request=CreateScoreRequest(
+                    traceId=trace_id,
+                    name="llm_judge_score",
+                    value=judge_output.score,
+                    comment=judge_output.reason,
+                )
+            )
+
+            langfuse.api.score.create(
+                request=CreateScoreRequest(
+                    traceId=trace_id,
+                    name="llm_judge_passed",
+                    value=1.0 if judge_output.passed else 0.0,
+                    comment="Score >= 0.7" if judge_output.passed else "Score < 0.7",
+                )
+            )
+
+            if not judge_output.passed:
+                print(
+                    f"[prod_judge] Low quality detected: {judge_output.score:.2f} - {judge_output.reason}"
+                )
+
+            return judge_output
+
+        except Exception as e:
+            print(f"[prod_judge] Evaluation failed: {e}")
+            return None
+
+
+# Module-level singleton (same pattern as Video 6)
+_evaluator: Optional[ProductionJudgeEvaluator] = None
+
+
+def get_production_judge() -> ProductionJudgeEvaluator:
+    """Get or create the production judge singleton."""
+    global _evaluator
+    if _evaluator is None:
+        _evaluator = ProductionJudgeEvaluator()
+    return _evaluator
+
+
+async def run_production_judge(
+    trace_id: str,
+    output: str,
+    inputs: Optional[dict] = None,
+) -> Optional[JudgeResult]:
+    """
+    Convenience function to run production LLM judge.
+
+    This is the main entry point for agent_api.py integration.
+    Wraps exceptions to prevent evaluation failures from breaking the API.
+
+    Args:
+        trace_id: Langfuse trace ID (hex string)
+        output: The agent's response text
+        inputs: Optional input data for context
+
+    Returns:
+        JudgeResult if evaluation ran, None otherwise
+
+    Example:
+        # In agent_api.py:
+        if production_trace_id and random.random() < JUDGE_SAMPLE_RATE:
+            asyncio.create_task(
+                run_production_judge(
+                    trace_id=production_trace_id,
+                    output=full_response,
+                    inputs={"query": request.query}
+                )
+            )
+    """
+    try:
+        evaluator = get_production_judge()
+        return await evaluator.evaluate_and_sync(trace_id, output, inputs)
+    except Exception as e:
+        print(f"[prod_judge] Unexpected error: {e}")
         return None
-
-    # Build prompt
-    prompt = f"""
-User Query: {trace.input}
-
-Agent Response: {trace.output}
-
-Evaluate this response.
-"""
-
-    # Run judge
-    result = await judge_agent.run(prompt)
-    judge_output = result.output
-
-    # Attach scores to trace
-    langfuse.score(
-        trace_id=trace_id,
-        name="llm_judge_score",
-        value=judge_output.score,
-        comment=judge_output.reason
-    )
-
-    langfuse.score(
-        trace_id=trace_id,
-        name="llm_judge_passed",
-        value=1.0 if judge_output.passed else 0.0,
-    )
-
-    return judge_output
 ```
 
 ### Step 2: Integrate with Agent API (Sampled)
@@ -175,7 +321,7 @@ Evaluate this response.
 
 import asyncio
 import random
-from evals.prod_judge import evaluate_trace
+from evals.prod_judge import run_production_judge
 
 JUDGE_SAMPLE_RATE = 0.1  # Evaluate 10% of requests
 
@@ -183,37 +329,56 @@ JUDGE_SAMPLE_RATE = 0.1  # Evaluate 10% of requests
 @app.post("/api/pydantic-agent")
 async def pydantic_agent_endpoint(request: AgentRequest):
     # ... existing agent code generates response ...
+    # ... existing prod_rules evaluation from Video 6 ...
 
     trace_id = langfuse_context.get_current_trace_id()
 
-    # Sample: only evaluate some requests
+    # VIDEO 7: LLM Judge (sampled)
+    # More expensive than rules, so we sample
     if trace_id and random.random() < JUDGE_SAMPLE_RATE:
-        # Fire and forget - don't block response
-        asyncio.create_task(evaluate_trace(trace_id))
+        asyncio.create_task(
+            run_production_judge(
+                trace_id=trace_id,
+                output=full_response,
+                inputs={"query": request.query}
+            )
+        )
 
     return {"response": full_response}
 ```
 
 **Key points:**
-- **10% sample rate** keeps costs manageable
-- **Async** so users don't wait
-- **gpt-4o-mini** is cheap (~$0.001/eval)
+- **10% sample rate** keeps costs manageable (~$1-5/day at 1000 traces)
+- **Async (fire-and-forget)** so users don't wait
+- **GPT-5-mini** is cost-effective (~$0.002/eval)
+- **Same pattern as Video 6** — easy to follow
 
 ---
 
 ## Cost Management
 
+### Model Selection
+
+| Model | Input | Output | ~Cost per Eval | Use Case |
+|-------|-------|--------|----------------|----------|
+| gpt-5-nano | $0.05/M | $0.40/M | ~$0.0005 | Simple binary checks |
+| gpt-5-mini | $0.25/M | $2.00/M | ~$0.002 | **Recommended default** |
+| gpt-5 | $1.25/M | $10/M | ~$0.01 | Complex nuanced evaluation |
+| claude-sonnet-4.5 | $3/M | $15/M | ~$0.02 | Alternative perspective |
+
+**Note:** GPT-5 offers 90% discount on cached tokens, making repeated evaluations even cheaper.
+
 ### Sampling Strategies
 
 ```python
 # Evaluate all (expensive)
-SAMPLE_RATE = 1.0  # ~$10-50/day at 1000 traces
+SAMPLE_RATE = 1.0  # ~$20/day at 1000 traces with gpt-5-mini
 
-# Evaluate 10% (balanced)
-SAMPLE_RATE = 0.1  # ~$1-5/day
+# Evaluate 10% (balanced) - RECOMMENDED
+SAMPLE_RATE = 0.1  # ~$2/day
 
 # Evaluate 1% (budget)
-SAMPLE_RATE = 0.01  # ~$0.10-0.50/day
+SAMPLE_RATE = 0.01  # ~$0.20/day
 ```
 
 ### Smart Sampling
@@ -221,86 +386,148 @@ SAMPLE_RATE = 0.01  # ~$0.10-0.50/day
 Evaluate more for interesting traces:
 
 ```python
-def should_evaluate(trace) -> bool:
-    """Smart sampling: evaluate more interesting traces."""
+import random
 
-    # Always evaluate negative user feedback
-    if trace.metadata.get("user_feedback") == "negative":
+def should_evaluate(trace_metadata: dict, base_rate: float = 0.05) -> bool:
+    """
+    Smart sampling: evaluate more interesting traces.
+
+    Always evaluate:
+    - Negative user feedback (from Video 8)
+    - Tool-using traces (more complex)
+    - Long conversations
+
+    Random sample the rest at base_rate.
+    """
+    # Always evaluate negative feedback
+    if trace_metadata.get("user_feedback") == "negative":
         return True
 
-    # Always evaluate if tools were used
-    if trace.metadata.get("tools_used"):
+    # Always evaluate if multiple tools were used
+    tools_used = trace_metadata.get("tools_used", [])
+    if len(tools_used) > 1:
         return True
+
+    # Higher rate for RAG queries
+    if "retrieve" in str(tools_used):
+        return random.random() < 0.2  # 20% for RAG
 
     # Random sample the rest
-    return random.random() < 0.05
+    return random.random() < base_rate
 ```
-
-### Model Selection
-
-| Use Case | Model | Cost per Eval |
-|----------|-------|---------------|
-| High volume | gpt-4o-mini | ~$0.001 |
-| Balanced | gpt-4o | ~$0.01 |
-| Nuanced | claude-sonnet | ~$0.02 |
 
 ---
 
 ## What You See in Langfuse
 
-After integration:
+After integration, each evaluated trace has these scores:
 
 | Score Name | Type | Meaning |
 |------------|------|---------|
 | `llm_judge_score` | 0.0-1.0 | Quality score |
-| `llm_judge_passed` | 0 or 1 | Passed threshold (0.7) |
+| `llm_judge_passed` | 0 or 1 | Passed threshold (>= 0.7) |
 
 ### Dashboard Uses
 
 - **Filter**: `llm_judge_passed = 0` to find failures
-- **Trend**: Quality score over time
+- **Trend**: Quality score over time (catch regressions)
 - **Compare**: Before/after prompt changes
-- **Correlate**: Judge score vs user feedback
+- **Correlate**: Judge score vs user feedback (Video 8)
+- **Debug**: Click through to see judge reasoning
 
 ---
 
-## RAG Evaluation
+## Multi-Dimension Evaluation
 
-For RAG systems, add context to your judge:
+For more granular insights, evaluate multiple aspects:
 
 ```python
-# Variation: RAG faithfulness judge
-judge_agent = Agent(
-    model="openai:gpt-4o-mini",
-    output_type=JudgeResult,
+class MultiDimensionJudgeResult(BaseModel):
+    """Multi-dimension evaluation result."""
+
+    relevance: float      # 0.0-1.0: Does it address the question?
+    helpfulness: float    # 0.0-1.0: Is it actionable?
+    accuracy: float       # 0.0-1.0: Is it factually correct?
+    overall: float        # 0.0-1.0: Overall quality
+    reason: str           # Brief explanation
+
+
+multi_judge_agent = Agent(
+    model=judge_model,
+    output_type=MultiDimensionJudgeResult,
+    system_prompt="""You are an AI quality evaluator.
+
+Evaluate the agent's response on these dimensions (each 0.0-1.0):
+
+1. Relevance: Does it address the user's question?
+2. Helpfulness: Is it actionable and useful?
+3. Accuracy: Does it appear factually correct?
+4. Overall: Weighted average considering all factors
+
+Return scores for each dimension and a brief overall reason.""",
+)
+```
+
+Then sync each dimension as a separate Langfuse score for filtering/trending.
+
+---
+
+## RAG Faithfulness Evaluation
+
+For RAG systems, evaluate whether responses are grounded in retrieved documents:
+
+```python
+class RAGFaithfulnessResult(BaseModel):
+    """RAG faithfulness evaluation result."""
+
+    faithfulness: float   # 0.0-1.0: Is response grounded?
+    hallucination: bool   # True if significant hallucinations detected
+    reason: str           # Explanation
+
+
+rag_judge_agent = Agent(
+    model=judge_model,
+    output_type=RAGFaithfulnessResult,
     system_prompt="""You are a RAG faithfulness evaluator.
 
 Check if the response is grounded in the retrieved documents.
-- Score 1.0 if fully grounded
-- Score 0.5 if minor unsupported claims
-- Score 0.0 if significant hallucinations
 
-Be strict about hallucinations."""
+Scoring:
+- 1.0: Fully grounded, all claims supported
+- 0.7-0.9: Mostly grounded, minor inferences acceptable
+- 0.5-0.7: Partially grounded, some unsupported claims
+- 0.0-0.5: Significant hallucinations
+
+Be strict about hallucinations.""",
 )
 
-async def evaluate_rag_trace(trace_id: str, retrieved_docs: list[str]):
-    trace = langfuse.get_trace(trace_id)
 
-    context = "\n\n".join(retrieved_docs)
+async def evaluate_rag_trace(
+    trace_id: str,
+    query: str,
+    output: str,
+    retrieved_docs: list[str],
+) -> Optional[RAGFaithfulnessResult]:
+    """Evaluate RAG response faithfulness."""
 
-    prompt = f"""
-User Query: {trace.input}
+    context = "\n\n---\n\n".join(retrieved_docs)
+
+    prompt = f"""User Query: {query}
 
 Retrieved Documents:
 {context}
 
-Agent Response: {trace.output}
+Agent Response: {output}
 
-Is the response faithful to the documents?
-"""
+Is the response faithful to the documents?"""
 
-    result = await judge_agent.run(prompt)
-    # ... attach scores ...
+    result = await rag_judge_agent.run(prompt)
+    judge_output = result.output
+
+    # Sync to Langfuse
+    # ... same pattern as above ...
+
+    return judge_output
 ```
 
 ---
@@ -309,26 +536,51 @@ Is the response faithful to the documents?
 
 ### 1. Start with Langfuse Built-in
 
-Use managed evaluators first. Only build custom when you need domain-specific rubrics.
+Use managed evaluators first for common metrics (helpfulness, toxicity). Only build custom when you need domain-specific rubrics.
 
-### 2. Sample Strategically
+### 2. Use GPT-5-mini for Production
+
+For most evaluations, GPT-5-mini provides excellent quality at ~$0.002/eval. Reserve GPT-5 for complex nuanced evaluations.
+
+### 3. Sample Strategically
 
 Don't evaluate everything. Prioritize:
-- Negative user feedback
-- Tool-using traces
-- Long conversations
-
-### 3. Use gpt-4o-mini
-
-For most evaluations, mini is sufficient and 10x cheaper.
+- Negative user feedback (always evaluate)
+- Tool-using traces (more complex behavior)
+- Long conversations (more room for errors)
+- Random sample for baseline (5-10%)
 
 ### 4. Compare to Human Annotations
 
 Use Video 5 (Manual Annotation) to validate your judge rubrics:
-- Annotate 50 traces manually
-- Run judge on same traces
-- Compare scores
-- Tune rubric based on disagreements
+1. Annotate 50 traces manually
+2. Run judge on same traces
+3. Compare scores
+4. Tune rubric based on disagreements
+5. Repeat until correlation is high
+
+### 5. Monitor Judge Performance
+
+Track judge metrics over time:
+- Average score (should be stable)
+- Pass rate (watch for drift)
+- Cost per day (budget control)
+- Latency (shouldn't block users)
+
+---
+
+## Evolution from Video 4
+
+| Video 4 (Local) | Video 7 (Production) |
+|-----------------|----------------------|
+| `LLMJudge` evaluator in YAML | `Agent` with structured output |
+| Sync execution | Async (fire-and-forget) |
+| Terminal report | Langfuse scores |
+| All cases evaluated | Sampled for cost control |
+| Fixed golden dataset | Real production traces |
+| Same rubric patterns | Same rubric patterns! |
+
+**Key insight:** The rubric-writing skills from Video 4 transfer directly. What changes is the execution model (async) and output destination (Langfuse scores).
 
 ---
 
@@ -338,10 +590,17 @@ Use Video 5 (Manual Annotation) to validate your judge rubrics:
 |-------|-----------------|
 | **Video 8: User Feedback** | Collect thumbs up/down from real users |
 
+With LLM judge scores AND user feedback, you can:
+- Correlate: Do users agree with the judge?
+- Calibrate: Tune rubrics based on user disagreement
+- Prioritize: Focus human review on disagreements
+
 ---
 
 ## Resources
 
-- [Langfuse LLM-as-a-Judge](https://langfuse.com/docs/evaluation/evaluation-methods/llm-as-a-judge)
-- [Langfuse Evaluator Library](https://langfuse.com/docs/evaluation/evaluation-methods/llm-as-a-judge#langfuse-managed-evaluator-library)
 - [pydantic-ai Agents](https://ai.pydantic.dev/agents/)
+- [pydantic-ai Models (OpenAI)](https://ai.pydantic.dev/models/openai/)
+- [pydantic-evals LLMJudge](https://ai.pydantic.dev/evals/evaluators/llm-judge/)
+- [Langfuse LLM-as-a-Judge](https://langfuse.com/docs/scores/model-based-evals)
+- [Langfuse Custom Scores](https://langfuse.com/docs/scores/custom)
