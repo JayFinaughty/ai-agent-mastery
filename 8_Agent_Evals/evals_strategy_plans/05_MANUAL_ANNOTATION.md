@@ -148,30 +148,45 @@ Queues help manage batch annotation workflows.
    - Specific user or session
 2. Bulk add to queue
 
-**Option C: Programmatic (API)**
+**Option C: Programmatic (REST API)**
+
+> **Note:** As of 2025, Langfuse annotation queues are managed via REST API.
+> There's no dedicated SDK method yet, but you can use the API directly.
 
 ```python
-from langfuse import Langfuse
+import os
+import base64
+import requests
+from langfuse import get_client
 
-langfuse = Langfuse()
+langfuse = get_client()
 
-# Get traces with low scores
-traces = langfuse.fetch_traces(
-    filter={
-        "scores": {
-            "name": "llm_judge_score",
-            "value": {"lt": 0.5}
-        }
-    },
-    limit=50
-)
+# Step 1: Fetch traces (filter by scores client-side)
+traces = langfuse.api.trace.list(limit=100)
 
-# Add to annotation queue via API
+# Step 2: Filter for low-scoring traces
+low_score_traces = []
 for trace in traces.data:
-    langfuse.add_to_annotation_queue(
-        queue_name="Failed Responses",
-        trace_id=trace.id
+    for score in (trace.scores or []):
+        if score.name == "llm_judge_score" and score.value < 0.5:
+            low_score_traces.append(trace)
+            break
+
+# Step 3: Add to annotation queue via REST API
+LANGFUSE_HOST = os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com")
+LANGFUSE_PUBLIC_KEY = os.getenv("LANGFUSE_PUBLIC_KEY")
+LANGFUSE_SECRET_KEY = os.getenv("LANGFUSE_SECRET_KEY")
+auth = base64.b64encode(f"{LANGFUSE_PUBLIC_KEY}:{LANGFUSE_SECRET_KEY}".encode()).decode()
+
+queue_id = "your-queue-id"  # Get from Langfuse UI or API
+
+for trace in low_score_traces[:50]:
+    response = requests.post(
+        f"{LANGFUSE_HOST}/api/public/annotation-queues/{queue_id}/items",
+        headers={"Authorization": f"Basic {auth}"},
+        json={"traceId": trace.id}
     )
+    print(f"Added trace {trace.id}: {response.status_code}")
 ```
 
 ---
@@ -205,28 +220,28 @@ for trace in traces.data:
 Compare judge scores to expert annotations:
 
 ```python
-from langfuse import Langfuse
+from langfuse import get_client
 
-langfuse = Langfuse()
+langfuse = get_client()
 
-def compare_judge_to_expert():
+def compare_judge_to_expert(limit: int = 500) -> dict:
     """Compare LLM judge scores to expert annotations."""
 
-    # Get traces with both judge and expert scores
-    traces = langfuse.fetch_traces(limit=500)
+    # Fetch traces using the SDK
+    traces = langfuse.api.trace.list(limit=limit)
 
     comparisons = []
     for trace in traces.data:
         judge_score = None
         expert_score = None
 
-        for score in trace.scores:
+        for score in (trace.scores or []):
             if score.name == "llm_judge_score":
                 judge_score = score.value
-            if score.name == "accuracy":  # Expert annotation
+            elif score.name == "accuracy":  # Expert annotation
                 expert_score = score.value / 5.0  # Normalize to 0-1
 
-        if judge_score and expert_score:
+        if judge_score is not None and expert_score is not None:
             comparisons.append({
                 "trace_id": trace.id,
                 "judge": judge_score,
@@ -234,13 +249,16 @@ def compare_judge_to_expert():
                 "diff": abs(judge_score - expert_score)
             })
 
-    # Calculate correlation
-    if comparisons:
-        avg_diff = sum(c["diff"] for c in comparisons) / len(comparisons)
-        print(f"Average difference: {avg_diff:.2f}")
-        print(f"Sample size: {len(comparisons)}")
+    # Calculate metrics
+    if not comparisons:
+        return {"error": "No traces with both judge and expert scores"}
 
-    return comparisons
+    avg_diff = sum(c["diff"] for c in comparisons) / len(comparisons)
+    return {
+        "sample_size": len(comparisons),
+        "average_difference": round(avg_diff, 3),
+        "comparisons": comparisons[:10]  # Sample for review
+    }
 ```
 
 #### B. Export for Golden Dataset
@@ -248,37 +266,45 @@ def compare_judge_to_expert():
 Convert annotations to test cases:
 
 ```python
-def export_annotated_as_golden_dataset():
+import yaml
+from pathlib import Path
+from langfuse import get_client
+
+langfuse = get_client()
+
+def export_annotated_as_golden_dataset(min_accuracy: int = 4, limit: int = 100):
     """Export high-confidence annotations as golden dataset."""
 
-    traces = langfuse.fetch_traces(
-        filter={
-            "scores": {
-                "name": "accuracy",
-                "value": {"gte": 4}  # Only high-quality examples
-            }
-        }
-    )
+    # Fetch traces and filter by accuracy score client-side
+    traces = langfuse.api.trace.list(limit=limit)
 
     golden_cases = []
     for trace in traces.data:
-        golden_cases.append({
-            "name": f"annotated_{trace.id[:8]}",
-            "inputs": {"query": trace.input},
-            "expected_output": trace.output,
-            "metadata": {
-                "expert_accuracy": next(
-                    s.value for s in trace.scores if s.name == "accuracy"
-                ),
-                "source": "expert_annotation"
-            }
-        })
+        # Find accuracy score
+        accuracy_score = None
+        for score in (trace.scores or []):
+            if score.name == "accuracy":
+                accuracy_score = score.value
+                break
+
+        # Only include high-quality examples
+        if accuracy_score and accuracy_score >= min_accuracy:
+            golden_cases.append({
+                "name": f"annotated_{trace.id[:8]}",
+                "inputs": {"query": trace.input or ""},
+                "metadata": {
+                    "expert_accuracy": accuracy_score,
+                    "source": "expert_annotation",
+                    "trace_id": trace.id
+                }
+            })
 
     # Save as YAML for pydantic-evals
-    import yaml
-    with open("golden_dataset_from_annotations.yaml", "w") as f:
-        yaml.dump({"cases": golden_cases}, f)
+    output_path = Path("golden_dataset_from_annotations.yaml")
+    with open(output_path, "w") as f:
+        yaml.dump({"cases": golden_cases}, f, default_flow_style=False)
 
+    print(f"Exported {len(golden_cases)} cases to {output_path}")
     return golden_cases
 ```
 
@@ -287,24 +313,39 @@ def export_annotated_as_golden_dataset():
 Export for model training:
 
 ```python
-def export_training_data():
-    """Export annotations as training data."""
+import json
+from langfuse import get_client
 
-    traces = langfuse.fetch_traces(
-        filter={
-            "scores": {"name": "accuracy", "value": {"gte": 4}}
-        }
-    )
+langfuse = get_client()
+
+def export_training_data(min_accuracy: int = 4, limit: int = 500):
+    """Export annotations as training data in JSONL format."""
+
+    traces = langfuse.api.trace.list(limit=limit)
 
     training_data = []
     for trace in traces.data:
-        training_data.append({
-            "messages": [
-                {"role": "user", "content": trace.input},
-                {"role": "assistant", "content": trace.output}
-            ]
-        })
+        # Check if trace has high accuracy score
+        accuracy_score = None
+        for score in (trace.scores or []):
+            if score.name == "accuracy":
+                accuracy_score = score.value
+                break
 
+        if accuracy_score and accuracy_score >= min_accuracy:
+            training_data.append({
+                "messages": [
+                    {"role": "user", "content": trace.input or ""},
+                    {"role": "assistant", "content": trace.output or ""}
+                ]
+            })
+
+    # Save as JSONL (standard format for fine-tuning)
+    with open("training_data.jsonl", "w") as f:
+        for item in training_data:
+            f.write(json.dumps(item) + "\n")
+
+    print(f"Exported {len(training_data)} examples to training_data.jsonl")
     return training_data
 ```
 
@@ -423,31 +464,55 @@ Goal: Establish baseline before/after
 
 ## API Reference
 
-### Add to Queue
+### Add to Queue (REST API)
 
 ```python
-langfuse.add_to_annotation_queue(
-    queue_name="Quality Review",
-    trace_id="trace-123"
+import requests
+import base64
+import os
+
+LANGFUSE_HOST = os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com")
+LANGFUSE_PUBLIC_KEY = os.getenv("LANGFUSE_PUBLIC_KEY")
+LANGFUSE_SECRET_KEY = os.getenv("LANGFUSE_SECRET_KEY")
+auth = base64.b64encode(f"{LANGFUSE_PUBLIC_KEY}:{LANGFUSE_SECRET_KEY}".encode()).decode()
+
+# Add trace to annotation queue
+response = requests.post(
+    f"{LANGFUSE_HOST}/api/public/annotation-queues/{queue_id}/items",
+    headers={"Authorization": f"Basic {auth}"},
+    json={"traceId": "trace-123"}
 )
 ```
 
-### Fetch Annotations
+### Fetch Traces with Scores
 
 ```python
-scores = langfuse.get_scores(
-    trace_id="trace-123",
-    name="accuracy"
-)
+from langfuse import get_client
+
+langfuse = get_client()
+
+# List traces (scores are included in response)
+traces = langfuse.api.trace.list(limit=100)
+
+# Access scores on each trace
+for trace in traces.data:
+    for score in (trace.scores or []):
+        print(f"{trace.id}: {score.name} = {score.value}")
 ```
 
-### Create Score via API
+### Create Score via SDK
 
 ```python
-langfuse.score(
+from langfuse import get_client
+
+langfuse = get_client()
+
+# Attach a score to a trace
+langfuse.create_score(
     trace_id="trace-123",
     name="expert_review",
     value=4,
+    data_type="NUMERIC",
     comment="Good response but slightly verbose"
 )
 ```
@@ -472,3 +537,205 @@ You might be tempted to build:
 - [Langfuse Human Annotation](https://langfuse.com/docs/evaluation/evaluation-methods/annotation)
 - [Annotation Queues](https://langfuse.com/changelog/2025-03-13-public-api-annotation-queues)
 - [Score Configurations](https://langfuse.com/docs/scores/custom)
+
+---
+
+## Instructor Guide: Recording Video 5
+
+### Pre-Recording Checklist
+
+1. **Langfuse Account Ready:**
+   ```bash
+   # Verify credentials in .env
+   cd 8_Agent_Evals/backend_agent_api
+   cat .env | grep -E "^LANGFUSE_"
+   # Should show: LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY, LANGFUSE_HOST
+   ```
+
+2. **Generate Test Traces:**
+   ```bash
+   # Start the agent API
+   cd 8_Agent_Evals/backend_agent_api
+   python agent_api.py &
+
+   # Send a few test queries via the frontend or curl
+   # This creates traces in Langfuse for annotation
+   ```
+
+3. **Verify Traces Exist:**
+   - Open Langfuse dashboard
+   - Navigate to Traces
+   - Confirm you see recent traces from your agent
+
+4. **Open Browser Tabs:**
+   - Langfuse dashboard (logged in)
+   - Settings → Score Configs page
+   - Human Annotation page
+
+### Recording Flow
+
+**Part 1: Introduction (2-3 min)**
+- Explain transition from Local (Videos 2-4) to Production phase
+- Show the workflow diagram from the top of this doc
+- Key message: "No custom UI needed - Langfuse handles everything"
+
+**Part 2: Create Score Configs (3-5 min)**
+- Navigate: Settings → Score Configs → New Score Config
+- Create three configs:
+
+  | Name | Type | Min | Max | Description |
+  |------|------|-----|-----|-------------|
+  | `accuracy` | Numeric | 1 | 5 | "Rate factual accuracy: 1=wrong, 5=perfect" |
+  | `helpfulness` | Numeric | 1 | 5 | "Rate how helpful: 1=useless, 5=excellent" |
+  | `safety_passed` | Boolean | - | - | "Does response pass safety checks?" |
+
+- Show how the description becomes the rubric annotators see
+
+**Part 3: Create Annotation Queue (3-5 min)**
+- Navigate: Human Annotation → New Queue
+- Configure:
+  - Name: "Weekly Quality Review"
+  - Select all three score configs
+  - Optional: Add assignees
+- Discuss queue types (show table from doc):
+  - Daily Spot Check
+  - Failed Responses
+  - Safety Review
+  - Weekly Deep Dive
+
+**Part 4: Add Traces to Queue (3-5 min)**
+- **Method 1: Single trace**
+  - Click on any trace in the Traces list
+  - Click "Annotate" dropdown → Select queue
+- **Method 2: Bulk selection**
+  - Use checkboxes in trace list
+  - Click "Actions" → "Add to queue"
+- Show filtering options (date range, user, tags)
+
+**Part 5: Annotate a Trace (5-7 min)**
+- Open Human Annotation → Select "Weekly Quality Review"
+- Click first item in queue
+- Walk through the annotation interface:
+  - **Left panel**: See conversation (user query, agent response)
+  - **Right panel**: Score input fields
+  - Rate accuracy (1-5)
+  - Rate helpfulness (1-5)
+  - Toggle safety_passed
+  - Add optional comment: "Response was accurate but could be more concise"
+- Click "Complete + Next" to proceed
+
+**Part 6: View Results & Export (3-5 min)**
+- Return to the annotated trace
+- Show scores now attached
+- Discuss use cases:
+  - "These scores calibrate our LLM Judge in Video 7"
+  - "High-quality traces become golden dataset cases"
+  - "We'll compare to user feedback in Video 8"
+- Optionally show the `annotation_helpers.py` script
+
+### Expected Screen Flow
+
+```
+1. Langfuse Dashboard
+   └── Settings → Score Configs
+       └── Create: accuracy, helpfulness, safety_passed
+
+2. Human Annotation
+   └── New Queue: "Weekly Quality Review"
+
+3. Traces List
+   └── Select traces → Add to queue
+
+4. Annotation Queue
+   └── Annotate first trace
+       └── Score all dimensions
+       └── Complete + Next
+
+5. Trace Detail
+   └── View attached scores
+```
+
+### Key Teaching Moments
+
+1. **"Why use Langfuse instead of building our own?"**
+   - Would need: annotation UI, queue system, score storage, user management
+   - Langfuse handles all of this out of the box
+   - Focus your time on improving the agent, not building infrastructure
+
+2. **"When should I manually annotate?"**
+   - Not everything! Sample 1-10% of traces
+   - Focus on: failures, edge cases, random samples
+   - Use LLM Judge (Video 7) for scale, humans for calibration
+
+3. **"How does this connect to other videos?"**
+   - Video 2 (Golden Dataset): Annotations become test cases
+   - Video 7 (LLM Judge Prod): Annotations calibrate the judge
+   - Video 8 (User Feedback): Compare expert vs user ratings
+
+4. **"What makes a good annotator?"**
+   - Consistent use of rubric
+   - Comments on unusual scores
+   - Takes breaks to avoid fatigue
+
+### Troubleshooting During Recording
+
+| Issue | Quick Fix |
+|-------|-----------|
+| No traces in Langfuse | Check LANGFUSE_* env vars, restart agent API |
+| Score configs not showing | Refresh page, check project selection |
+| Can't add to queue | Ensure queue has score configs selected |
+| Annotations not saving | Check network tab for errors, refresh |
+
+### Post-Recording Git Workflow
+
+```bash
+# Ensure you're on the prep branch
+git checkout module-8-prep-evals
+
+# Stage the new/modified files
+git add evals/annotation_helpers.py
+git add ../evals_strategy_plans/05_MANUAL_ANNOTATION.md
+
+# Commit
+git commit -m "Implement Video 5: Manual Annotation"
+
+# Tag this state
+git tag module-8-04-manual-annotation
+
+# Push commit and tag
+git push origin module-8-prep-evals
+git push origin module-8-04-manual-annotation
+```
+
+### Files Created/Modified in This Video
+
+```
+8_Agent_Evals/
+├── backend_agent_api/
+│   └── evals/
+│       └── annotation_helpers.py    # Helper for exporting annotations
+└── evals_strategy_plans/
+    └── 05_MANUAL_ANNOTATION.md      # This document (updated)
+```
+
+### Demo Script: Using annotation_helpers.py
+
+At the end of the video, optionally demonstrate:
+
+```bash
+cd 8_Agent_Evals/backend_agent_api
+
+# Export high-quality annotations to golden dataset
+python -c "
+from evals.annotation_helpers import export_annotations_to_golden_dataset
+cases = export_annotations_to_golden_dataset(min_accuracy=4)
+print(f'Exported {len(cases)} cases')
+"
+
+# Compare LLM judge to expert scores (for calibration)
+python -c "
+from evals.annotation_helpers import compare_judge_to_expert
+result = compare_judge_to_expert()
+print(result)
+"
+```
