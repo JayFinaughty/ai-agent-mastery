@@ -310,3 +310,183 @@ Don't build custom dashboards. Use Langfuse's built-in filtering:
 
 - [Langfuse Scores API](https://langfuse.com/docs/scores)
 - [pydantic-evals Custom Evaluators](https://ai.pydantic.dev/evals/evaluators/custom/)
+
+---
+
+## Instructor Guide: Recording Video 6
+
+### Pre-Recording Checklist
+
+1. **Environment Setup:**
+   ```bash
+   cd 8_Agent_Evals/backend_agent_api
+
+   # Verify .env has Langfuse credentials
+   cat .env | grep -E "^LANGFUSE_" | head -3
+
+   # Verify existing evaluators from Video 3
+   ls evals/evaluators.py
+
+   # Test that the API starts
+   python -c "from evals.evaluators import NoPII, NoForbiddenWords; print('Evaluators loaded')"
+   ```
+
+2. **Langfuse Dashboard:**
+   - Open Langfuse dashboard in browser
+   - Navigate to Traces view
+   - Prepare to filter by score names
+
+3. **Verify Video 3 evaluators exist:**
+   ```bash
+   cat evals/evaluators.py | head -30
+   # Should show NoPII, NoForbiddenWords classes
+   ```
+
+### Recording Flow
+
+**Part 1: Introduction (2-3 min)**
+- Explain the difference between local (Video 3) and production evals
+- Show the architecture diagram from the strategy doc
+- Key point: "Same evaluators, different execution context"
+
+**Part 2: Create prod_rules.py (5-7 min)**
+- Create `evals/prod_rules.py`
+- Walk through `ProductionRuleEvaluator` class:
+  - How it wraps existing evaluators
+  - EvaluatorContext construction
+  - Langfuse score creation via `langfuse.create_score()`
+- Explain the async pattern and why it doesn't block
+
+**Part 3: Integrate with agent_api.py (3-5 min)**
+- Show the three changes needed:
+  1. Import statement
+  2. Trace ID extraction from span context
+  3. `asyncio.create_task()` for evaluation
+- Emphasize: "Non-blocking - user gets response immediately"
+
+**Part 4: Demo - Passing Evaluations (3-5 min)**
+- Start the API: `python agent_api.py`
+- Send a normal query: "What documents do you have about sales?"
+- Show Langfuse dashboard:
+  - Find the trace
+  - Show `rule_no_pii = 1`, `rule_no_forbidden = 1`, `rule_check_passed = 1`
+
+**Part 5: Demo - Failing Evaluations (3-5 min)**
+- Send query to trigger PII detection:
+  ```
+  "What's a good format for a phone number? Show me an example like 555-123-4567"
+  ```
+- Show Langfuse: `rule_no_pii = 0`
+- Send query to trigger forbidden words:
+  ```
+  "Write a sample error message that says 'Invalid password'"
+  ```
+- Show Langfuse: `rule_no_forbidden = 0`
+
+**Part 6: Filtering Violations (2-3 min)**
+- In Langfuse, filter traces by `rule_check_passed = 0`
+- Show how to identify problematic responses
+- "This is your production monitoring dashboard"
+
+### Expected Output
+
+**Langfuse Dashboard - Trace Scores:**
+```
+Trace: abc123...
+├── rule_no_pii: 1.0 (comment: "No PII detected")
+├── rule_no_forbidden: 1.0 (comment: "No forbidden words")
+└── rule_check_passed: 1.0 (comment: "All rule-based evaluators passed")
+```
+
+**Langfuse Dashboard - Failed Trace:**
+```
+Trace: def456...
+├── rule_no_pii: 0.0 (comment: "Found phone pattern in output")
+├── rule_no_forbidden: 1.0 (comment: "No forbidden words")
+└── rule_check_passed: 0.0 (comment: "One or more rules failed")
+```
+
+### Troubleshooting During Recording
+
+| Issue | Likely Cause | Fix |
+|-------|--------------|-----|
+| No scores appear in Langfuse | Trace not synced yet | Wait 5-10 seconds, refresh |
+| `ModuleNotFoundError: langfuse` | Missing package | `pip install langfuse` |
+| `Failed to get Langfuse client` | Missing credentials | Check `LANGFUSE_*` in .env |
+| All tests pass unexpectedly | LLM avoiding patterns | Try more explicit prompts |
+| Import error for evaluators | Wrong directory | Run from `backend_agent_api/` |
+
+### Key Teaching Moments
+
+1. **"Why async?"**
+   - Response latency is critical - users shouldn't wait for evaluations
+   - Evaluations run in background after response is sent
+   - Use `asyncio.create_task()` to fire-and-forget
+
+2. **"Same evaluators, different context"**
+   - Video 3: `Dataset.evaluate()` with batch test cases
+   - Video 6: Direct `evaluator.evaluate(ctx)` on single responses
+   - Same code, different execution patterns
+
+3. **"Why sync to Langfuse?"**
+   - Centralized monitoring dashboard
+   - Filter and find violations
+   - Track quality over time
+   - Correlate with user feedback (Video 8)
+
+4. **"What about blocking responses?"**
+   - Show the optional blocking pattern from the doc
+   - "Only for critical safety - adds latency"
+   - "Most rules should be monitoring-only"
+
+5. **"Adding more rules"**
+   - Show how to add evaluators to the list
+   - "Each rule becomes a new Langfuse score"
+
+### Post-Recording Git Workflow
+
+```bash
+# Ensure you're on the prep branch
+git checkout module-8-prep-evals
+
+# Stage the new files
+git add evals/prod_rules.py agent_api.py evals/__init__.py
+
+# Commit
+git commit -m "Implement Video 6: Production Rule-Based Evals"
+
+# Tag this state
+git tag module-8-05-rule-based-prod
+
+# Push commit and tag
+git push origin module-8-prep-evals
+git push origin module-8-05-rule-based-prod
+```
+
+### Files Created/Modified in This Video
+
+```
+backend_agent_api/
+├── evals/
+│   ├── __init__.py            # Updated docstring
+│   ├── prod_rules.py          # NEW: Production evaluator with Langfuse sync
+│   └── evaluators.py          # Existing (from Video 3)
+└── agent_api.py               # Modified: Added import and eval task
+```
+
+### Demo Prompts Reference
+
+**Normal (all pass):**
+```
+"What documents do you have about sales?"
+```
+
+**PII Failure:**
+```
+"What's a good format for a phone number? Show me an example like 555-123-4567"
+```
+
+**Forbidden Words Failure:**
+```
+"Write a sample error message that says 'Invalid password'"
+```

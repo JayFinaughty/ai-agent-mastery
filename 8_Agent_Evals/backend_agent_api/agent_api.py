@@ -21,6 +21,9 @@ import os
 # Import Langfuse configuration
 from configure_langfuse import configure_langfuse
 
+# Import production rule-based evaluators (Video 6)
+from evals.prod_rules import run_production_evals
+
 # Import database utility functions
 from db_utils import (
     fetch_conversation_history,
@@ -306,12 +309,17 @@ async def pydantic_agent(request: AgentRequest, user: Dict[str, Any] = Depends(v
             span_context = tracer.start_as_current_span("Pydantic-Ai-Trace") if tracer else nullcontext()
             
             with span_context as span:
+                # Extract trace_id for production evals (must be inside span context)
+                production_trace_id = None
                 if tracer and span:
                     # Set user and session attributes for Langfuse
                     span.set_attribute("langfuse.user.id", request.user_id)
                     span.set_attribute("langfuse.session.id", session_id)
                     span.set_attribute("input.value", request.query)
-                
+                    # Extract trace_id in hex format for Langfuse score sync
+                    span_ctx = span.get_span_context()
+                    production_trace_id = format(span_ctx.trace_id, '032x')
+
                 # Run the agent with the user prompt, binary contents, and the chat history
                 async with agent.iter(agent_input, deps=agent_deps, message_history=pydantic_messages) as run:
                     async for node in run:
@@ -330,7 +338,18 @@ async def pydantic_agent(request: AgentRequest, user: Dict[str, Any] = Depends(v
                 # Set the output value after completion if tracing
                 if tracer and span:
                     span.set_attribute("output.value", full_response)
-                    
+
+                # Run production rule-based evaluators (async, non-blocking)
+                # Video 6: Evaluates response for PII, forbidden words, etc.
+                if production_trace_id:
+                    asyncio.create_task(
+                        run_production_evals(
+                            trace_id=production_trace_id,
+                            output=full_response,
+                            inputs={"query": request.query}
+                        )
+                    )
+
             # After streaming is complete, store the full response in the database
             message_data = run.result.new_messages_json()
             
