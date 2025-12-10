@@ -423,10 +423,35 @@ Trace: def456...
    - Evaluations run in background after response is sent
    - Use `asyncio.create_task()` to fire-and-forget
 
+   **What to show:**
+   ```python
+   # In agent_api.py - evaluation runs AFTER response sent
+   if production_trace_id:
+       asyncio.create_task(
+           run_production_evals(
+               trace_id=production_trace_id,
+               output=full_response,
+               inputs={"query": request.query}
+           )
+       )
+   ```
+   **Say:** "Notice we don't `await` this. The user gets their response immediately. The evaluation happens in the background."
+
 2. **"Same evaluators, different context"**
    - Video 3: `Dataset.evaluate()` with batch test cases
    - Video 6: Direct `evaluator.evaluate(ctx)` on single responses
    - Same code, different execution patterns
+
+   **What to show:**
+   ```python
+   # Video 3 (Local): Batch evaluation via Dataset
+   report = await dataset.evaluate(run_agent)
+
+   # Video 6 (Production): Direct call on single response
+   ctx = EvaluatorContext(name="prod", inputs={}, output=response, ...)
+   result = evaluator.evaluate(ctx)
+   ```
+   **Say:** "Same `NoPII()` evaluator, same `evaluate()` method. The difference is HOW we call it - batch vs single."
 
 3. **"Why sync to Langfuse?"**
    - Centralized monitoring dashboard
@@ -434,14 +459,46 @@ Trace: def456...
    - Track quality over time
    - Correlate with user feedback (Video 8)
 
+   **What to show:**
+   - Open Langfuse dashboard
+   - Filter traces by `rule_check_passed = 0`
+   - Show a failed trace with the score comment explaining why
+
+   **Say:** "Instead of building your own dashboard, Langfuse gives you filtering, time series, and correlation out of the box."
+
 4. **"What about blocking responses?"**
    - Show the optional blocking pattern from the doc
    - "Only for critical safety - adds latency"
    - "Most rules should be monitoring-only"
 
+   **What to show:**
+   ```python
+   # Optional: Block response if critical rule fails (adds latency!)
+   async def check_before_send(response: str) -> tuple[bool, str]:
+       ctx = EvaluatorContext(output=response, ...)
+       pii_result = NoPII().evaluate(ctx)
+       if not pii_result.value:
+           return False, "I cannot share that information."
+       return True, response
+   ```
+   **Say:** "You CAN block responses, but it adds latency. Only do this for critical safety rules. Most rules should just monitor and alert."
+
 5. **"Adding more rules"**
    - Show how to add evaluators to the list
    - "Each rule becomes a new Langfuse score"
+
+   **What to show:**
+   ```python
+   # In prod_rules.py - just add to the list
+   self.evaluators = [
+       ("no_pii", NoPII()),
+       ("no_forbidden", NoForbiddenWords(forbidden=["password", "secret"])),
+       # Add more:
+       ("has_greeting", Contains(value="hello", case_sensitive=False)),
+       ("max_length", lambda ctx: len(ctx.output) < 5000),
+   ]
+   ```
+   **Say:** "Adding a new rule is just adding to this list. Each one becomes a separate score in Langfuse - `rule_has_greeting`, `rule_max_length`, etc."
 
 ### Post-Recording Git Workflow
 
