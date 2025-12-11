@@ -40,6 +40,7 @@ export interface Database {
             type: 'human' | 'ai';
             content: string;
             files?: FileAttachment[];
+            trace_id?: string;
           };
           created_at: string;
         };
@@ -51,6 +52,7 @@ export interface Database {
             type: 'human' | 'ai';
             content: string;
             files?: FileAttachment[];
+            trace_id?: string;
           };
           created_at?: string;
         };
@@ -62,6 +64,7 @@ export interface Database {
             type: 'human' | 'ai';
             content: string;
             files?: FileAttachment[];
+            trace_id?: string;
           };
           created_at?: string;
         };

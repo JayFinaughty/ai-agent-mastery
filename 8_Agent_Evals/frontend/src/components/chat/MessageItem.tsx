@@ -11,6 +11,7 @@ import ReactMarkdown from 'react-markdown';
 import { PrismLight as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { cn } from '@/lib/utils';
+import { FeedbackWidget } from './FeedbackWidget';
 
 interface MessageItemProps {
   message: Message;
@@ -176,19 +177,22 @@ export const MessageItem = ({ message, isLastMessage = false }: MessageItemProps
             </div>
             
             {!isUser && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                onClick={handleCopy}
-              >
-                {copied ? (
-                  <Check className="h-3 w-3" />
-                ) : (
-                  <Copy className="h-3 w-3" />
-                )}
-                <span className="sr-only">Copy message</span>
-              </Button>
+              <>
+                <FeedbackWidget traceId={message.message.trace_id} />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={handleCopy}
+                >
+                  {copied ? (
+                    <Check className="h-3 w-3" />
+                  ) : (
+                    <Copy className="h-3 w-3" />
+                  )}
+                  <span className="sr-only">Copy message</span>
+                </Button>
+              </>
             )}
           </div>
         </div>

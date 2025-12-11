@@ -20,6 +20,7 @@ interface StreamingChunk {
   complete?: boolean;
   conversation_title?: string;
   error?: string;
+  trace_id?: string;
 }
 
 export const sendMessage = async (
@@ -153,7 +154,8 @@ export const sendMessage = async (
                   text: lastTextChunk,
                   complete: true,
                   session_id: finalSessionId,
-                  conversation_title: finalTitle
+                  conversation_title: finalTitle,
+                  trace_id: chunk.trace_id,
                 });
                 
                 // We can exit the streaming loop now

@@ -121,20 +121,40 @@ export const useMessageHandling = ({
           // Check for completion flag
           if (chunk.complete === true && !completionReceived) {
             completionReceived = true;
-            
+
+            // Store trace_id from completion chunk for feedback submission
+            if (chunk.trace_id) {
+              setMessages((prev) => {
+                const updatedMessages = [...prev];
+                const aiMessageIndex = updatedMessages.findIndex(msg => msg.id === aiMessageId);
+
+                if (aiMessageIndex !== -1) {
+                  updatedMessages[aiMessageIndex] = {
+                    ...updatedMessages[aiMessageIndex],
+                    message: {
+                      ...updatedMessages[aiMessageIndex].message,
+                      trace_id: chunk.trace_id,
+                    },
+                  };
+                }
+
+                return updatedMessages;
+              });
+            }
+
             // If we have a session_id in the completion chunk, update the message
             if (chunk.session_id && chunk.session_id !== currentSessionId) {
               setMessages((prev) => {
                 const updatedMessages = [...prev];
                 const aiMessageIndex = updatedMessages.findIndex(msg => msg.id === aiMessageId);
-                
+
                 if (aiMessageIndex !== -1) {
                   updatedMessages[aiMessageIndex] = {
                     ...updatedMessages[aiMessageIndex],
                     session_id: chunk.session_id,
                   };
                 }
-                
+
                 return updatedMessages;
               });
             }

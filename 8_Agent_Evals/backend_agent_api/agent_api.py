@@ -394,13 +394,14 @@ async def pydantic_agent(request: AgentRequest, user: Dict[str, Any] = Depends(v
                         "text": full_response,
                         "session_id": session_id,
                         "conversation_title": conversation_title,
+                        "trace_id": production_trace_id,
                         "complete": True
                     }
                     yield json.dumps(final_data).encode('utf-8') + b'\n'
                 except Exception as e:
                     print(f"Error processing title: {str(e)}")
             else:
-                yield json.dumps({"text": full_response, "complete": True}).encode('utf-8') + b'\n'
+                yield json.dumps({"text": full_response, "trace_id": production_trace_id, "complete": True}).encode('utf-8') + b'\n'
 
             # Wait for the memory task to complete if needed
             try:

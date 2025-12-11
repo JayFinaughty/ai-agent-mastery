@@ -7,6 +7,8 @@ import { ChatLayout } from '@/components/chat/ChatLayout';
 import { useConversationManagement } from '@/components/chat/ConversationManagement';
 import { useMessageHandling } from '@/components/chat/MessageHandling';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useConversationRating } from '@/hooks/useConversationRating';
+import { ConversationRating } from '@/components/chat/ConversationRating';
 
 export const Chat = () => {
   const { user, session } = useAuth();
@@ -71,22 +73,39 @@ export const Chat = () => {
     }
   }, [selectedConversation, loadMessages]);
 
-  // No longer needed since we're simplifying the UI to just disable the send button during loading
+  // Conversation rating hook for periodic feedback collection
+  const {
+    showRating,
+    currentTraceId,
+    handleRatingComplete,
+    handleRatingDismiss,
+  } = useConversationRating(messages);
 
   return (
-    <ChatLayout
-      conversations={conversations}
-      messages={messages}
-      selectedConversation={selectedConversation}
-      loading={loading}
-      error={error}
-      isSidebarCollapsed={isSidebarCollapsed}
-      onSendMessage={handleSendMessage}
-      onNewChat={handleNewChat}
-      onSelectConversation={handleSelectConversation}
-      onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-      newConversationId={newConversationId}
-    />
+    <>
+      <ChatLayout
+        conversations={conversations}
+        messages={messages}
+        selectedConversation={selectedConversation}
+        loading={loading}
+        error={error}
+        isSidebarCollapsed={isSidebarCollapsed}
+        onSendMessage={handleSendMessage}
+        onNewChat={handleNewChat}
+        onSelectConversation={handleSelectConversation}
+        onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        newConversationId={newConversationId}
+      />
+      {showRating && currentTraceId && (
+        <div className="fixed bottom-24 right-8 z-50">
+          <ConversationRating
+            traceId={currentTraceId}
+            onComplete={handleRatingComplete}
+            onDismiss={handleRatingDismiss}
+          />
+        </div>
+      )}
+    </>
   );
 };
 
