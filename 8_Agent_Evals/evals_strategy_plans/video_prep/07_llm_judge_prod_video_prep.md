@@ -67,7 +67,7 @@ When learners realize that the `LLMJudge` rubrics they wrote for their golden da
 - Key talking points:
   - "We've been building up evaluation layers: golden dataset, rule-based, LLM judge locally. Now we add the final piece — LLM judge in production."
   - Briefly recap Video 4 (local LLM judge with rubrics) and Video 6 (async pattern with Langfuse scores)
-  - Preview what we'll build: a pydantic-ai judge agent that runs async and syncs quality scores
+  - Preview three options: Langfuse built-in evaluators, custom Langfuse evaluators, and pydantic-ai judges
 
 - Avoid:
   - Deep dive into Langfuse setup (covered in earlier videos)
@@ -76,7 +76,14 @@ When learners realize that the `LLMJudge` rubrics they wrote for their golden da
 ### Concept Explanation (3-4 minutes)
 
 - Core concepts to cover:
-  - **Why pydantic-ai Agent instead of pydantic-evals LLMJudge?** More control over prompts, structured output, works outside eval framework context
+  - **Three options for production LLM judges:**
+    1. **Langfuse built-in evaluators** — Use prebuilt templates (Helpfulness, Relevance, etc.) with no code
+    2. **Custom Langfuse evaluators** — Create your own evaluation prompts in Langfuse UI with JSONPath variable mapping
+    3. **pydantic-ai judge** — Full code control with structured output and complex logic
+  - **When to use each:**
+    - Built-in: Quick start, common metrics
+    - Custom Langfuse: Domain-specific rubrics without code, team collaboration
+    - pydantic-ai: Structured output, version control, complex evaluation logic
   - **Sampling for cost control**: At 1000 requests/day with 100% evaluation, you'd pay ~$2/day. At 10%, it's $0.20/day. Show the math.
   - **What "async" means here**: Fire-and-forget. User gets their response immediately; judge runs in background.
 

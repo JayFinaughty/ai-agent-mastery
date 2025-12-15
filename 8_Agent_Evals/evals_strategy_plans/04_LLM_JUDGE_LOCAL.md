@@ -65,7 +65,6 @@ from pydantic_evals.evaluators import LLMJudge
 
 LLMJudge(
     rubric="Response is helpful and accurate",
-    model="openai:gpt-5-mini",       # Judge model (cost-effective)
     include_input=True,              # Show input to judge
     include_expected_output=False,   # Don't show expected
 )
@@ -76,12 +75,47 @@ LLMJudge(
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `rubric` | str | required | Evaluation criteria |
-| `model` | str | `openai:gpt-5-mini` | Judge model |
+| `model` | str | Uses default | Judge model (optional - see below) |
 | `include_input` | bool | `False` | Include user query |
 | `include_expected_output` | bool | `False` | Include expected answer |
 | `model_settings` | ModelSettings | `None` | Temperature, etc. |
 | `assertion` | dict/bool | `True` | Pass/fail output |
 | `score` | dict/bool | `None` | Numeric score output |
+
+### Configuring the Judge Model (Recommended Approach)
+
+Rather than specifying the model in each `LLMJudge` evaluator in YAML, we configure a **default judge model** in code. This approach:
+- Uses the same API credentials as your agent (`LLM_API_KEY`)
+- Supports custom `base_url` for OpenAI-compatible providers
+- Keeps YAML clean and focused on rubrics
+
+**In `run_evals.py`:**
+
+```python
+from pydantic_evals.evaluators.llm_as_a_judge import set_default_judge_model
+from pydantic_ai.models.openai import OpenAIChatModel
+from pydantic_ai.providers.openai import OpenAIProvider
+
+# Configure the judge model to use the same API key as the agent
+judge_model = OpenAIChatModel(
+    os.getenv('LLM_CHOICE', 'gpt-4o-mini'),
+    provider=OpenAIProvider(
+        base_url=os.getenv('LLM_BASE_URL', 'https://api.openai.com/v1'),
+        api_key=os.getenv('LLM_API_KEY'),
+    )
+)
+set_default_judge_model(judge_model)
+```
+
+**In YAML (no model needed):**
+
+```yaml
+- LLMJudge:
+    rubric: "Response is helpful and accurate"
+    include_input: true
+```
+
+The judge will use the default model configured in code. This is the approach used in this module.
 
 ---
 

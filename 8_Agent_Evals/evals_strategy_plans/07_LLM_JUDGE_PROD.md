@@ -34,10 +34,11 @@
 ## What You'll Learn in This Video
 
 1. How to use Langfuse's built-in LLM evaluators (no code)
-2. How to build a custom judge with pydantic-ai (like Video 4, but for production)
-3. How to run evaluation async (non-blocking) using the pattern from Video 6
-4. How to sample traces for cost control
-5. How to monitor quality trends in Langfuse dashboard
+2. How to create custom LLM evaluators in Langfuse's UI (domain-specific rubrics)
+3. How to build a custom judge with pydantic-ai (like Video 4, but for production)
+4. How to run evaluation async (non-blocking) using the pattern from Video 6
+5. How to sample traces for cost control
+6. How to monitor quality trends in Langfuse dashboard
 
 ## Difference from Local (Video 4)
 
@@ -97,6 +98,66 @@ Langfuse provides visibility into evaluator execution:
 - See model responses with reasoning
 - Track token usage and costs
 - Monitor status (Completed, Error, Delayed, Pending)
+
+---
+
+## Creating Custom Evaluators in Langfuse UI
+
+When the built-in templates don't match your needs, you can create **custom LLM evaluators** directly in Langfuse's UI — no code required.
+
+### When to Use Custom Langfuse Evaluators
+
+- You need **domain-specific rubrics** but don't want to write code
+- You want to **experiment quickly** with different evaluation criteria
+- You need **non-technical team members** to create/modify evaluators
+
+### Setting Up a Custom Evaluator
+
+1. Go to **Langfuse → Evaluators → "+ Set up Evaluator"**
+2. Select **"Custom"** instead of a prebuilt template
+3. **Draft your evaluation prompt** with `{{variables}}` placeholders:
+
+```
+You are evaluating an AI assistant's response.
+
+User Query: {{input}}
+
+Assistant Response: {{output}}
+
+Evaluate the response on these criteria:
+1. Does it directly answer the user's question?
+2. Is the information accurate and helpful?
+3. Is it appropriately concise?
+
+Score from 0 to 1, where 1 is excellent.
+```
+
+4. **Configure variable mappings** using JSONPath:
+   - `input` → `{{trace.input}}` or `$.messages[0].content` for nested data
+   - `output` → `{{trace.output}}` or `$.choices[0].message.content`
+   - `ground_truth` → (optional) for comparison evaluations
+
+5. **Customize scoring** (optional):
+   - Adjust the score prompt (0-1 range)
+   - Customize the reasoning prompt for chain-of-thought
+
+6. **Set model and sampling**:
+   - Pin a specific model or use the default evaluation model
+   - Set sample rate (e.g., 10% for cost control)
+
+7. Save and enable
+
+### Live Preview
+
+As you configure the mapping, Langfuse shows a **live preview** of the evaluation prompt populated with actual data from your recent traces. This helps you verify your JSONPath expressions are correct.
+
+### When to Use Code Instead
+
+Use the pydantic-ai approach (Option 2 below) when you need:
+- **Structured output** (multi-field responses like `{score, reason, suggestions}`)
+- **Complex logic** (conditional evaluation, multi-step reasoning)
+- **Integration with existing code** (e.g., rule-based pre-filtering)
+- **Version control** for your evaluation logic
 
 ---
 
