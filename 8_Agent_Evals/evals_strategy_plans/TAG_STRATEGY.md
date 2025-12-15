@@ -27,7 +27,7 @@ No external services. Simple Python scripts with `pydantic-evals`.
 
 | Order | Feature | Tag | What's Added |
 |-------|---------|-----|--------------|
-| 1 | Golden Dataset | `module-8-01-golden-dataset` | YAML test cases, evaluation runner |
+| 1 | Golden Dataset | `module-8-01-golden-dataset` | YAML test cases, evaluation runner, RAG mock data |
 | 2 | Rule-Based (Local) | `module-8-02-rule-based-local` | Deterministic checks (Contains, tool calls) |
 | 3 | LLM Judge (Local) | `module-8-03-llm-judge-local` | LLMJudge evaluator with rubrics |
 

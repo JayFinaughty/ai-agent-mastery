@@ -140,14 +140,27 @@ Each video should show how the dataset evolves from the previous video.
 - `image_analysis`
 - `get_document_content`
 
-### Evals Directory (to be created)
+### Evals Directory
 ```
 backend_agent_api/
 ├── evals/
 │   ├── __init__.py
-│   ├── golden_dataset.yaml
-│   ├── run_evals.py
-│   └── custom_evaluators.py  (optional, Video 3)
+│   ├── golden_dataset.yaml          # General agent behavior tests (10 cases)
+│   ├── golden_dataset_rag.yaml      # RAG/web search tests (14 cases)
+│   ├── run_evals.py                 # Supports --dataset general|rag|all
+│   ├── seed_test_data.py            # Seeds basic test documents
+│   ├── seed_rag_mock_data.py        # Seeds NeuroVerse RAG documents
+│   └── evaluators.py                # Custom evaluators (ContainsAny, etc.)
+```
+
+### Mock Data Directory
+```
+8_Agent_Evals/
+├── mock_data/                        # NeuroVerse Studios documents (9 files)
+│   ├── NeuroVerse Studios_ Company Overview.md
+│   ├── NeuroVerse Studios - Q1 2024 Quarterly Report.md
+│   ├── Neural Adaptation Engine (NAE).md
+│   └── ... (6 more documents)
 ```
 
 ## Version Requirements

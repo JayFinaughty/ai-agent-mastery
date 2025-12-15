@@ -9,13 +9,21 @@ including tool call verification and AI-powered quality assessment.
 
 Usage:
     cd backend_agent_api
-    python evals/run_evals.py
+    python evals/run_evals.py                  # Run general dataset
+    python evals/run_evals.py --dataset rag    # Run RAG/web search dataset
+    python evals/run_evals.py --dataset all    # Run both datasets
+
+Datasets:
+    general - Original golden dataset (general agent behavior)
+    rag     - RAG and web search focused tests (NeuroVerse documents)
+    all     - Run both datasets
 
 Exit Codes:
     0 - Pass rate >= 80%
     1 - Pass rate < 80%
 """
 
+import argparse
 import asyncio
 import os
 import sys
@@ -118,19 +126,20 @@ async def run_agent(inputs: dict) -> str:
         return str(result.output)
 
 
-async def main() -> int:
+async def run_dataset(dataset_path: Path, dataset_name: str) -> tuple[int, int, float]:
     """
-    Load the golden dataset and run evaluation.
+    Run evaluation on a single dataset.
+
+    Args:
+        dataset_path: Path to the dataset YAML file
+        dataset_name: Human-readable name for the dataset
 
     Returns:
-        Exit code (0 for pass, 1 for fail)
+        Tuple of (passed, total, pass_rate)
     """
-    # Load dataset from YAML
-    dataset_path = Path(__file__).parent / "golden_dataset.yaml"
-
     if not dataset_path.exists():
         print(f"Error: Dataset not found at {dataset_path}")
-        return 1
+        return 0, 0, 0.0
 
     # Load dataset, registering our custom evaluators
     dataset = Dataset[dict, str].from_file(
@@ -138,7 +147,7 @@ async def main() -> int:
     )
 
     print("\n" + "=" * 60)
-    print("GOLDEN DATASET EVALUATION")
+    print(f"EVALUATION: {dataset_name}")
     print("=" * 60)
     print(f"\nDataset: {dataset_path.name}")
     print(f"Cases: {len(dataset.cases)}")
@@ -152,7 +161,6 @@ async def main() -> int:
     report.print(include_input=True, include_output=True)
 
     # Calculate results
-    # A case passes if all its assertions pass (no False values)
     def case_passed(case) -> bool:
         if case.evaluator_failures:
             return False
@@ -162,18 +170,68 @@ async def main() -> int:
     total = len(report.cases)
     pass_rate = passed / total if total > 0 else 0
 
-    # Print summary
+    return passed, total, pass_rate
+
+
+async def main() -> int:
+    """
+    Load the golden dataset(s) and run evaluation.
+
+    Returns:
+        Exit code (0 for pass, 1 for fail)
+    """
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description="Run agent evaluations")
+    parser.add_argument(
+        "--dataset",
+        choices=["general", "rag", "all"],
+        default="general",
+        help="Which dataset to run (default: general)"
+    )
+    args = parser.parse_args()
+
+    # Define dataset paths
+    evals_dir = Path(__file__).parent
+    datasets = {
+        "general": (evals_dir / "golden_dataset.yaml", "General Golden Dataset"),
+        "rag": (evals_dir / "golden_dataset_rag.yaml", "RAG & Web Search Dataset"),
+    }
+
+    # Determine which datasets to run
+    if args.dataset == "all":
+        datasets_to_run = list(datasets.items())
+    else:
+        datasets_to_run = [(args.dataset, datasets[args.dataset])]
+
+    # Run evaluations
+    total_passed = 0
+    total_cases = 0
+
+    for dataset_key, (dataset_path, dataset_name) in datasets_to_run:
+        passed, total, pass_rate = await run_dataset(dataset_path, dataset_name)
+        total_passed += passed
+        total_cases += total
+
+        # Print individual dataset summary
+        print("\n" + "-" * 60)
+        print(f"{dataset_name} Results:")
+        print(f"  Passed: {passed}/{total} ({pass_rate:.1%})")
+        print("-" * 60)
+
+    # Overall summary
+    overall_pass_rate = total_passed / total_cases if total_cases > 0 else 0
+
     print("\n" + "=" * 60)
-    print("SUMMARY")
+    print("OVERALL SUMMARY")
     print("=" * 60)
-    print(f"Total Cases:   {total}")
-    print(f"Passed:        {passed}")
-    print(f"Failed:        {total - passed}")
-    print(f"Pass Rate:     {pass_rate:.1%}")
+    print(f"Total Cases:   {total_cases}")
+    print(f"Passed:        {total_passed}")
+    print(f"Failed:        {total_cases - total_passed}")
+    print(f"Pass Rate:     {overall_pass_rate:.1%}")
     print("=" * 60)
 
     # Determine exit code
-    if pass_rate >= PASS_THRESHOLD:
+    if overall_pass_rate >= PASS_THRESHOLD:
         print(f"\nPASSED - Above {PASS_THRESHOLD:.0%} threshold")
         return 0
     else:

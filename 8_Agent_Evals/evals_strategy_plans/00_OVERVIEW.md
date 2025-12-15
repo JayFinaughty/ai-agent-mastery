@@ -131,7 +131,7 @@ Start simple. No external services required.
 
 | Video | Feature | What You Build |
 |-------|---------|----------------|
-| 2 | Golden Dataset | 10-case YAML dataset, `run_evals.py` script |
+| 2 | Golden Dataset | General dataset (10 cases), RAG dataset (14 cases), mock data, `run_evals.py` |
 | 3 | Rule-Based (Local) | `Contains`, tool call checks |
 | 4 | LLM Judge (Local) | `LLMJudge` with quality rubrics |
 
