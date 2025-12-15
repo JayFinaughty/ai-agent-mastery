@@ -29,6 +29,7 @@ from evals.prod_judge import run_production_judge
 import random
 
 # Sampling rate for LLM judge (Video 7) - evaluate 10% of requests
+# Change to 1.0 for testing/demos to evaluate every request
 JUDGE_SAMPLE_RATE = 0.1
 
 # Import database utility functions

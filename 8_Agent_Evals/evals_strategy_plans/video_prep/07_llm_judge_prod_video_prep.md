@@ -32,6 +32,52 @@ The rubric-writing skills you learned locally transfer directly to production â€
 
 ---
 
+## Instructor Notes: Timing & Delays
+
+### Important: Scores Appear with Delay
+
+Both evaluation methods have delays before scores appear in Langfuse:
+
+1. **Langfuse Built-in Evaluators** (configured in UI)
+   - Run on a schedule (every few minutes)
+   - Expect **5-7 minute delay** before scores appear on traces
+   - Scores show up as separate "Execute evaluator" entries in Langfuse
+
+2. **Custom pydantic-ai Judge** (`prod_judge.py`)
+   - Runs immediately after agent response (async)
+   - Scores sync within seconds, but with **10% sampling** by default
+   - Only ~1 in 10 requests will have `llm_judge_score`
+
+### Changing Sample Rate for Demo
+
+For video recording, you may want to evaluate 100% of requests so scores appear reliably.
+
+**Location:** `backend_agent_api/agent_api.py` line 31-33
+
+```python
+# Default (production):
+JUDGE_SAMPLE_RATE = 0.1  # 10% of requests
+
+# For demo/testing:
+JUDGE_SAMPLE_RATE = 1.0  # 100% of requests
+```
+
+After changing, restart the container:
+```bash
+docker compose restart agent-api
+```
+
+**Remember to change back to 0.1 after recording** to avoid unnecessary API costs.
+
+### Demo Strategy
+
+1. **Before recording:** Set `JUDGE_SAMPLE_RATE = 1.0` and restart
+2. **During recording:** Send messages, scores appear immediately
+3. **Explain:** "In production, you'd sample 10% to control costs"
+4. **After recording:** Revert to 0.1
+
+---
+
 ## Narrative Arc
 
 ### The Hook (Opening)

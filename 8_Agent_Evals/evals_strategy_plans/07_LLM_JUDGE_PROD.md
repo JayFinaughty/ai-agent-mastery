@@ -42,14 +42,14 @@
 
 ## Difference from Local (Video 4)
 
-| Aspect | Local (Video 4) | Production (Video 7) |
-|--------|-----------------|----------------------|
+| Aspect        | Local (Video 4)           | Production (Video 7)                       |
+| ------------- | ------------------------- | ------------------------------------------ |
 | **Evaluator** | pydantic-evals `LLMJudge` | pydantic-ai `Agent` with structured output |
-| **Data** | Golden dataset (10 cases) | Production traces (1000s) |
-| **Output** | Terminal report | Langfuse dashboard scores |
-| **Execution** | Sync (blocking) | Async (fire-and-forget) |
-| **Cost** | Pay per eval run | Sample to control costs |
-| **Model** | `openai:gpt-5-mini` | `openai:gpt-5-mini` (same!) |
+| **Data**      | Golden dataset (10 cases) | Production traces (1000s)                  |
+| **Output**    | Terminal report           | Langfuse dashboard scores                  |
+| **Execution** | Sync (blocking)           | Async (fire-and-forget)                    |
+| **Cost**      | Pay per eval run          | Sample to control costs                    |
+| **Model**     | `openai:gpt-5-mini`       | `openai:gpt-5-mini` (same!)                |
 
 ---
 
@@ -59,32 +59,34 @@ Langfuse provides pre-built evaluators — no code required.
 
 ### Available Evaluator Templates
 
-| Evaluator | What it Checks |
-|-----------|----------------|
-| **Helpfulness** | Is the response useful? |
-| **Relevance** | Does it address the query? |
-| **Toxicity** | Is there harmful content? |
-| **Correctness** | Is information accurate? |
-| **Conciseness** | Is it appropriately brief? |
+| Evaluator         | What it Checks                        |
+| ----------------- | ------------------------------------- |
+| **Helpfulness**   | Is the response useful?               |
+| **Relevance**     | Does it address the query?            |
+| **Toxicity**      | Is there harmful content?             |
+| **Correctness**   | Is information accurate?              |
+| **Conciseness**   | Is it appropriately brief?            |
 | **Hallucination** | (RAG) Are claims grounded in context? |
 
 ### Setting Up in Langfuse UI
 
-1. Go to **Langfuse → Evaluators → "+ Set up Evaluator"**
-2. Select a template (e.g., "Helpfulness")
-3. Configure:
+1. Go to **Langfuse → llm-as-a-judge → "+ Set up Evaluator"**
+2. Create a connection to LLM provider (e.g., OpenAI)
+3. Select a template (e.g., "Helpfulness")
+4. Configure:
    - **Model**: GPT-5-mini or GPT-5 (configure in LLM Connections first)
    - **Sample rate**: 10% (to control costs)
    - **Variable mapping** (using JSONPath):
      - `input` → `{{trace.input}}`
      - `output` → `{{trace.output}}`
-4. Save and enable
+5. Save and enable
 
 **That's it.** Langfuse will automatically evaluate new traces.
 
 ### What You See
 
 Each evaluated trace gets a score:
+
 - `helpfulness`: 0.0-1.0
 - Reason explaining the score (chain-of-thought)
 - Full trace of the evaluation itself (for debugging)
@@ -94,6 +96,7 @@ Filter in Langfuse: `helpfulness < 0.5` to find low-quality responses.
 ### Execution Monitoring
 
 Langfuse provides visibility into evaluator execution:
+
 - View exact prompts sent to the judge
 - See model responses with reasoning
 - Track token usage and costs
@@ -154,6 +157,7 @@ As you configure the mapping, Langfuse shows a **live preview** of the evaluatio
 ### When to Use Code Instead
 
 Use the pydantic-ai approach (Option 2 below) when you need:
+
 - **Structured output** (multi-field responses like `{score, reason, suggestions}`)
 - **Complex logic** (conditional evaluation, multi-step reasoning)
 - **Integration with existing code** (e.g., rule-based pre-filtering)
@@ -409,6 +413,7 @@ async def pydantic_agent_endpoint(request: AgentRequest):
 ```
 
 **Key points:**
+
 - **10% sample rate** keeps costs manageable (~$1-5/day at 1000 traces)
 - **Async (fire-and-forget)** so users don't wait
 - **GPT-5-mini** is cost-effective (~$0.002/eval)
@@ -420,12 +425,12 @@ async def pydantic_agent_endpoint(request: AgentRequest):
 
 ### Model Selection
 
-| Model | Input | Output | ~Cost per Eval | Use Case |
-|-------|-------|--------|----------------|----------|
-| gpt-5-nano | $0.05/M | $0.40/M | ~$0.0005 | Simple binary checks |
-| gpt-5-mini | $0.25/M | $2.00/M | ~$0.002 | **Recommended default** |
-| gpt-5 | $1.25/M | $10/M | ~$0.01 | Complex nuanced evaluation |
-| claude-sonnet-4.5 | $3/M | $15/M | ~$0.02 | Alternative perspective |
+| Model             | Input   | Output  | ~Cost per Eval | Use Case                   |
+| ----------------- | ------- | ------- | -------------- | -------------------------- |
+| gpt-5-nano        | $0.05/M | $0.40/M | ~$0.0005       | Simple binary checks       |
+| gpt-5-mini        | $0.25/M | $2.00/M | ~$0.002        | **Recommended default**    |
+| gpt-5             | $1.25/M | $10/M   | ~$0.01         | Complex nuanced evaluation |
+| claude-sonnet-4.5 | $3/M    | $15/M   | ~$0.02         | Alternative perspective    |
 
 **Note:** GPT-5 offers 90% discount on cached tokens, making repeated evaluations even cheaper.
 
@@ -483,10 +488,10 @@ def should_evaluate(trace_metadata: dict, base_rate: float = 0.05) -> bool:
 
 After integration, each evaluated trace has these scores:
 
-| Score Name | Type | Meaning |
-|------------|------|---------|
-| `llm_judge_score` | 0.0-1.0 | Quality score |
-| `llm_judge_passed` | 0 or 1 | Passed threshold (>= 0.7) |
+| Score Name         | Type    | Meaning                   |
+| ------------------ | ------- | ------------------------- |
+| `llm_judge_score`  | 0.0-1.0 | Quality score             |
+| `llm_judge_passed` | 0 or 1  | Passed threshold (>= 0.7) |
 
 ### Dashboard Uses
 
@@ -606,6 +611,7 @@ For most evaluations, GPT-5-mini provides excellent quality at ~$0.002/eval. Res
 ### 3. Sample Strategically
 
 Don't evaluate everything. Prioritize:
+
 - Negative user feedback (always evaluate)
 - Tool-using traces (more complex behavior)
 - Long conversations (more room for errors)
@@ -614,6 +620,7 @@ Don't evaluate everything. Prioritize:
 ### 4. Compare to Human Annotations
 
 Use Video 5 (Manual Annotation) to validate your judge rubrics:
+
 1. Annotate 50 traces manually
 2. Run judge on same traces
 3. Compare scores
@@ -623,6 +630,7 @@ Use Video 5 (Manual Annotation) to validate your judge rubrics:
 ### 5. Monitor Judge Performance
 
 Track judge metrics over time:
+
 - Average score (should be stable)
 - Pass rate (watch for drift)
 - Cost per day (budget control)
@@ -632,14 +640,14 @@ Track judge metrics over time:
 
 ## Evolution from Video 4
 
-| Video 4 (Local) | Video 7 (Production) |
-|-----------------|----------------------|
+| Video 4 (Local)              | Video 7 (Production)           |
+| ---------------------------- | ------------------------------ |
 | `LLMJudge` evaluator in YAML | `Agent` with structured output |
-| Sync execution | Async (fire-and-forget) |
-| Terminal report | Langfuse scores |
-| All cases evaluated | Sampled for cost control |
-| Fixed golden dataset | Real production traces |
-| Same rubric patterns | Same rubric patterns! |
+| Sync execution               | Async (fire-and-forget)        |
+| Terminal report              | Langfuse scores                |
+| All cases evaluated          | Sampled for cost control       |
+| Fixed golden dataset         | Real production traces         |
+| Same rubric patterns         | Same rubric patterns!          |
 
 **Key insight:** The rubric-writing skills from Video 4 transfer directly. What changes is the execution model (async) and output destination (Langfuse scores).
 
@@ -647,11 +655,12 @@ Track judge metrics over time:
 
 ## What's Next
 
-| Video | What You'll Add |
-|-------|-----------------|
+| Video                      | What You'll Add                        |
+| -------------------------- | -------------------------------------- |
 | **Video 8: User Feedback** | Collect thumbs up/down from real users |
 
 With LLM judge scores AND user feedback, you can:
+
 - Correlate: Do users agree with the judge?
 - Calibrate: Tune rubrics based on user disagreement
 - Prioritize: Focus human review on disagreements
