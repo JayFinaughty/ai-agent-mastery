@@ -84,7 +84,7 @@ cases:
   # ============================================
   - name: document_search
     inputs:
-      query: "What documents do you have about sales?"
+      query: "Use RAG to search for documents about sales?"
     metadata:
       category: rag
       description: "Agent should search documents and acknowledge document-related query"
@@ -223,7 +223,7 @@ cases:
   # ============================================
   - name: current_events
     inputs:
-      query: "What's the weather like today?"
+      query: "What is the net worth of Elon Musk?"
     metadata:
       category: web
       description: "Agent should search for current info"
