@@ -118,7 +118,7 @@ Report whether we're on:
 ### Phase 4: Rebuild Docker Environment
 
 ```bash
-cd /Users/rasmus/Projects/cole/ai-agent-mastery/8_Agent_Evals
+cd /8_Agent_Evals
 
 # Stop current containers
 docker compose down
