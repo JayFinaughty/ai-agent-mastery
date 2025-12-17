@@ -120,15 +120,16 @@ async def generate_conversation_title(title_agent: Agent, query: str) -> str:
 
 async def store_message(
     supabase: Client,
-    session_id: str, 
-    message_type: str, 
-    content: str, 
-    message_data: Optional[bytes] = None, 
+    session_id: str,
+    message_type: str,
+    content: str,
+    message_data: Optional[bytes] = None,
     data: Optional[Dict] = None,
-    files: Optional[List[Dict[str, str]]] = None
+    files: Optional[List[Dict[str, str]]] = None,
+    trace_id: Optional[str] = None
 ):
     """Store a message in the Supabase messages table.
-    
+
     Args:
         supabase: Supabase client
         session_id: The session ID for the conversation
@@ -137,6 +138,7 @@ async def store_message(
         message_data: Optional binary data associated with the message
         data: Optional additional data for the message
         files: Optional list of file attachments with fileName, content, and mimeType
+        trace_id: Optional Langfuse trace ID for feedback submission
     """
     message_obj = {
         "type": message_type,
@@ -144,10 +146,14 @@ async def store_message(
     }
     if data:
         message_obj["data"] = data
-        
+
     # Add files to the message object if provided
     if files:
         message_obj["files"] = files
+
+    # Add trace_id for user feedback (Video 8)
+    if trace_id:
+        message_obj["trace_id"] = trace_id
 
     try:
         insert_data = {

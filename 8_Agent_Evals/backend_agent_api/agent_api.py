@@ -379,7 +379,8 @@ async def pydantic_agent(request: AgentRequest, user: Dict[str, Any] = Depends(v
                 message_type="ai",
                 content=full_response,
                 message_data=message_data,
-                data={"request_id": request.request_id}
+                data={"request_id": request.request_id},
+                trace_id=production_trace_id
             )
             
             # Wait for title generation to complete if it's running
