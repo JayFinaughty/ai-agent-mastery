@@ -111,7 +111,7 @@ async def generate_conversation_title(title_agent: Agent, query: str) -> str:
         result = await title_agent.run(prompt)
 
         # Extract just the text content from the result
-        title = result.data.strip()
+        title = result.output.strip()
         return title
     except Exception as e:
         print(f"Error generating conversation title: {str(e)}")
