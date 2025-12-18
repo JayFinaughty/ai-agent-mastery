@@ -76,6 +76,9 @@ services:
         VITE_AGENT_ENDPOINT: ${VITE_AGENT_ENDPOINT:-http://agent-api:8001/api/pydantic-agent}
         VITE_ENABLE_STREAMING: ${VITE_ENABLE_STREAMING:-true}
         VITE_LANGFUSE_HOST_WITH_PROJECT: ${VITE_LANGFUSE_HOST_WITH_PROJECT}
+        VITE_LANGFUSE_PUBLIC_KEY: ${VITE_LANGFUSE_PUBLIC_KEY}
+        VITE_LANGFUSE_HOST: ${VITE_LANGFUSE_HOST:-https://cloud.langfuse.com}
+        VITE_RATING_THRESHOLDS: ${VITE_RATING_THRESHOLDS:-5,10,15,20,25,30}
     container_name: dynamous-frontend
     restart: always
     ports:

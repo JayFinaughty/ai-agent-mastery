@@ -1,13 +1,14 @@
-import Langfuse from 'langfuse';
+import { LangfuseWeb } from 'langfuse';
 
 // Singleton Langfuse client instance
-let langfuseClient: Langfuse | null = null;
+let langfuseClient: LangfuseWeb | null = null;
 
 /**
  * Get or create the Langfuse client for frontend feedback submission.
+ * Uses LangfuseWeb which is designed for browser use with only a public key.
  * Returns null if Langfuse is not configured (graceful degradation).
  */
-export function getLangfuseClient(): Langfuse | null {
+export function getLangfuseClient(): LangfuseWeb | null {
   // Return cached instance if available
   if (langfuseClient !== null) {
     return langfuseClient;
@@ -22,7 +23,7 @@ export function getLangfuseClient(): Langfuse | null {
     return null;
   }
 
-  langfuseClient = new Langfuse({
+  langfuseClient = new LangfuseWeb({
     publicKey,
     baseUrl: host || 'https://cloud.langfuse.com',
   });
