@@ -1,0 +1,361 @@
+# Golden Dataset - RAG and Web Search Evaluation
+#
+# This dataset tests the agent's ability to:
+# 1. Retrieve relevant documents from the NeuroVerse knowledge base (RAG)
+# 2. Use web search for information NOT in the knowledge base
+# 3. Make correct decisions about when to use RAG vs web search
+#
+# All RAG test cases use ACTUAL facts from the NeuroVerse mock documents.
+# Web search cases target genuinely real-time information.
+#
+# Prerequisites:
+#   - Run: python evals/seed_rag_mock_data.py
+#   - Ensure Brave API key or SearXNG is configured
+#
+# Evaluators used:
+#   - HasMatchingSpan: Verify correct tool was called
+#   - Contains: Check for specific facts from documents
+#   - ContainsAny: Check for any of several valid values
+#   - LLMJudge: Assess response quality and accuracy
+
+cases:
+  # ============================================
+  # RAG: COMPANY INFORMATION (3 cases)
+  # Source: Company Overview, Q1 Report
+  # ============================================
+  - name: rag_company_founders
+    inputs:
+      query: "Who founded NeuroVerse Studios and when was the company founded?"
+    metadata:
+      category: rag
+      description: "Test retrieval of founder information"
+      source_doc: "Company Overview"
+    evaluators:
+      - HasMatchingSpan:
+          query:
+            has_attributes:
+              gen_ai.tool.name: "retrieve_relevant_documents"
+          evaluation_name: "called_rag_tool"
+      - Contains:
+          value: "Eliza Chen"
+          case_sensitive: false
+      - Contains:
+          value: "Marcus Wong"
+          case_sensitive: false
+      - Contains:
+          value: "2022"
+          case_sensitive: false
+      - LLMJudge:
+          rubric: |
+            Response should correctly identify:
+            1. Dr. Eliza Chen and Marcus Wong as founders
+            2. 2022 as the founding year
+            3. Their background as neuroscience researchers
+          include_input: true
+
+  - name: rag_company_funding
+    inputs:
+      query: "How much funding has NeuroVerse Studios raised and who led the investment?"
+    metadata:
+      category: rag
+      description: "Test retrieval of funding information"
+      source_doc: "Company Overview"
+    evaluators:
+      - HasMatchingSpan:
+          query:
+            has_attributes:
+              gen_ai.tool.name: "retrieve_relevant_documents"
+          evaluation_name: "called_rag_tool"
+      - Contains:
+          value: "45"
+          case_sensitive: false
+      - ContainsAny:
+          values: ["million", "M"]
+      - ContainsAny:
+          values: ["Horizon Ventures", "NeuraTech Capital"]
+      - LLMJudge:
+          rubric: |
+            Response should mention:
+            1. $45 million Series B funding
+            2. December 2023 timing
+            3. Lead investors (Horizon Ventures and/or NeuraTech Capital)
+          include_input: true
+
+  - name: rag_company_location
+    inputs:
+      query: "Where is NeuroVerse Studios headquartered?"
+    metadata:
+      category: rag
+      description: "Test retrieval of location information"
+      source_doc: "Company Overview"
+    evaluators:
+      - HasMatchingSpan:
+          query:
+            has_attributes:
+              gen_ai.tool.name: "retrieve_relevant_documents"
+          evaluation_name: "called_rag_tool"
+      - Contains:
+          value: "Seattle"
+          case_sensitive: false
+
+  # ============================================
+  # RAG: TECHNICAL SPECIFICATIONS (3 cases)
+  # Source: NAE Tech Spec, Q1 Report
+  # ============================================
+  - name: rag_nae_latency
+    inputs:
+      query: "What is the current latency of the Neural Adaptation Engine and what is the target latency?"
+    metadata:
+      category: rag
+      description: "Test retrieval of technical metrics"
+      source_doc: "NAE Tech Spec, Q1 Report"
+    evaluators:
+      - HasMatchingSpan:
+          query:
+            has_attributes:
+              gen_ai.tool.name: "retrieve_relevant_documents"
+          evaluation_name: "called_rag_tool"
+      - Contains:
+          value: "212"
+          case_sensitive: false
+      - Contains:
+          value: "150"
+          case_sensitive: false
+      - LLMJudge:
+          rubric: |
+            Response should accurately state:
+            1. Current latency is 212ms
+            2. Target latency is under 150ms
+            3. This is a key technical challenge
+          include_input: true
+
+  - name: rag_nae_sensors
+    inputs:
+      query: "What types of sensors does the Neural Adaptation Engine use to detect player states?"
+    metadata:
+      category: rag
+      description: "Test retrieval of sensor specifications"
+      source_doc: "NAE Tech Spec"
+    evaluators:
+      - HasMatchingSpan:
+          query:
+            has_attributes:
+              gen_ai.tool.name: "retrieve_relevant_documents"
+          evaluation_name: "called_rag_tool"
+      - ContainsAny:
+          values: ["eye tracking", "EEG", "GSR", "skin conductance", "PPG", "pulse"]
+      - LLMJudge:
+          rubric: |
+            Response should mention several sensor types used by NAE including:
+            eye tracking, EEG, GSR/skin conductance, PPG/pulse, IMU, microphone
+          include_input: true
+
+  - name: rag_development_progress
+    inputs:
+      query: "What is the development progress of the Dynamic Narrative Architecture and how many storyline variations does it support?"
+    metadata:
+      category: rag
+      description: "Test retrieval of specific development metrics"
+      source_doc: "Q1 2024 Report"
+    evaluators:
+      - HasMatchingSpan:
+          query:
+            has_attributes:
+              gen_ai.tool.name: "retrieve_relevant_documents"
+          evaluation_name: "called_rag_tool"
+      - ContainsAny:
+          values: ["89%", "89 percent", "eighty-nine"]
+      - Contains:
+          value: "78,000"
+          case_sensitive: false
+      - LLMJudge:
+          rubric: |
+            Response should state:
+            1. DNA is approximately 89% complete
+            2. Supports 78,000+ unique storyline variations
+          include_input: true
+
+  # ============================================
+  # RAG: BUSINESS & MARKETING (2 cases)
+  # Source: Marketing Meeting, Q1 Report
+  # ============================================
+  - name: rag_target_audience
+    inputs:
+      query: "What are NeuroVerse's target audience segments for Mindweaver and what are their market sizes?"
+    metadata:
+      category: rag
+      description: "Test retrieval of marketing segmentation data"
+      source_doc: "Marketing Strategy Meeting"
+    evaluators:
+      - HasMatchingSpan:
+          query:
+            has_attributes:
+              gen_ai.tool.name: "retrieve_relevant_documents"
+          evaluation_name: "called_rag_tool"
+      - ContainsAny:
+          values: ["Neurocurious", "Cognitive Enhancement", "Immersive Experience", "Therapeutic"]
+      - LLMJudge:
+          rubric: |
+            Response should identify target segments with market sizes:
+            - Neurocurious Gamers (8.2M)
+            - Cognitive Enhancement Seekers (12.7M)
+            - Immersive Experience Enthusiasts (5.4M)
+            - Therapeutic Application Users (3.8M)
+          include_input: true
+
+  - name: rag_employee_count
+    inputs:
+      query: "How many employees does NeuroVerse Studios have and what is the team composition?"
+    metadata:
+      category: rag
+      description: "Test retrieval of HR/team data"
+      source_doc: "Q1 2024 Report"
+    evaluators:
+      - HasMatchingSpan:
+          query:
+            has_attributes:
+              gen_ai.tool.name: "retrieve_relevant_documents"
+          evaluation_name: "called_rag_tool"
+      - Contains:
+          value: "87"
+          case_sensitive: false
+      - LLMJudge:
+          rubric: |
+            Response should mention:
+            1. Total headcount of 87 employees
+            2. Engineering is the largest team (42 or 48%)
+          include_input: true
+
+  # ============================================
+  # RAG: PRIVACY & GOVERNANCE (1 case)
+  # Source: Privacy Framework
+  # ============================================
+  - name: rag_privacy_principles
+    inputs:
+      query: "What are the guiding principles in NeuroVerse's neural data privacy framework?"
+    metadata:
+      category: rag
+      description: "Test retrieval of privacy policy information"
+      source_doc: "Neural Data Privacy Framework"
+    evaluators:
+      - HasMatchingSpan:
+          query:
+            has_attributes:
+              gen_ai.tool.name: "retrieve_relevant_documents"
+          evaluation_name: "called_rag_tool"
+      - ContainsAny:
+          values: ["Cognitive Sovereignty", "Informed Consent", "Data Minimization", "Privacy by Design"]
+      - LLMJudge:
+          rubric: |
+            Response should list several of the 7 guiding principles:
+            Cognitive Sovereignty, Informed Consent, Data Minimization,
+            Purpose Limitation, Privacy by Design, Rigorous Security, Transparency
+          include_input: true
+
+  # ============================================
+  # WEB SEARCH: REAL-TIME INFORMATION (3 cases)
+  # These require actual web search - NOT in RAG docs
+  # ============================================
+  - name: web_search_stock_price
+    inputs:
+      query: "What is NVIDIA's current stock price?"
+    metadata:
+      category: web_search
+      description: "Test web search for real-time financial data"
+    evaluators:
+      - HasMatchingSpan:
+          query:
+            has_attributes:
+              gen_ai.tool.name: "web_search"
+          evaluation_name: "called_web_search"
+      - LLMJudge:
+          rubric: |
+            Response should:
+            1. Provide a recent stock price for NVIDIA
+            2. Indicate this is current/recent market data
+            3. Not make up fictional numbers
+          include_input: true
+
+  - name: web_search_recent_vr_news
+    inputs:
+      query: "What are the latest VR headset announcements from Meta or Apple in 2024?"
+    metadata:
+      category: web_search
+      description: "Test web search for recent tech news"
+    evaluators:
+      - HasMatchingSpan:
+          query:
+            has_attributes:
+              gen_ai.tool.name: "web_search"
+          evaluation_name: "called_web_search"
+      - LLMJudge:
+          rubric: |
+            Response should discuss recent VR developments from Meta and/or Apple,
+            showing it retrieved current information from web search
+          include_input: true
+
+  - name: web_search_ai_news
+    inputs:
+      query: "What are the most recent developments in AI regulation in the European Union?"
+    metadata:
+      category: web_search
+      description: "Test web search for current regulatory news"
+    evaluators:
+      - HasMatchingSpan:
+          query:
+            has_attributes:
+              gen_ai.tool.name: "web_search"
+          evaluation_name: "called_web_search"
+      - LLMJudge:
+          rubric: |
+            Response should reference recent EU AI regulations or policy developments,
+            demonstrating use of web search for current events
+          include_input: true
+
+  # ============================================
+  # DOCUMENT LISTING (1 case)
+  # ============================================
+  - name: list_available_documents
+    inputs:
+      query: "What documents do you have available in your knowledge base about NeuroVerse?"
+    metadata:
+      category: rag
+      description: "Test list_documents tool usage"
+    evaluators:
+      - HasMatchingSpan:
+          query:
+            has_attributes:
+              gen_ai.tool.name: "list_documents"
+          evaluation_name: "called_list_documents"
+      - LLMJudge:
+          rubric: |
+            Response should list available NeuroVerse documents including
+            company overview, quarterly reports, technical specs, etc.
+          include_input: true
+
+  # ============================================
+  # NEGATIVE CASE: INFO NOT IN DOCS (1 case)
+  # ============================================
+  - name: rag_info_not_available
+    inputs:
+      query: "What is NeuroVerse Studios' policy on employee stock options and equity compensation?"
+    metadata:
+      category: rag_negative
+      description: "Test handling of queries for information not in documents"
+    evaluators:
+      - LLMJudge:
+          rubric: |
+            Since equity/stock option policies are NOT in the NeuroVerse documents,
+            the response should either:
+            1. Acknowledge the information is not available in the documents
+            2. Search the web for general information
+            3. NOT make up fictional policies
+            The response should be honest about limitations.
+          include_input: true
+
+# ============================================
+# GLOBAL EVALUATORS (applied to ALL cases)
+# ============================================
+evaluators:
+  - IsInstance: str
+  - MaxDuration: 45.0
