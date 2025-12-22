@@ -86,7 +86,7 @@ If not running the agent locally:
 
 ```bash
 # Navigate to the project directory
-cd 6_Agent_Deployment/backend_agent_api
+cd 8_Agent_Evals/backend_agent_api
 
 # Create a virtual environment
 python -m venv venv
@@ -261,7 +261,7 @@ docker run -d --name agent-api -p 8001:8001 --env-file .env agent-api
 1. Activate the virtual environment:
    ```bash
    # Navigate to the project directory
-   cd 6_Agent_Deployment/backend_agent_api
+   cd 8_Agent_Evals/backend_agent_api
    
    # Activate the virtual environment
    # On Windows:

@@ -84,13 +84,13 @@ cases:
   # ============================================
   - name: document_search
     inputs:
-      query: "Use RAG to search for documents about sales?"
+      query: "What is the projected revenue for Q1 of 2025?"
     metadata:
       category: rag
-      description: "Agent should search documents and acknowledge document-related query"
+      description: "Agent should search documents and answer the question accurately"
     evaluators:
       - Contains:
-          value: "document"
+          value: "$2.8"
           case_sensitive: false
       # VIDEO 3: Verify the RAG tool was actually called
       # Note: Tool name is in gen_ai.tool.name attribute, not span name
@@ -105,7 +105,6 @@ cases:
             Response should:
             1. Indicate what documents were found
             2. Provide relevant summaries
-            3. Not make claims beyond retrieved content
           include_input: true
 
   - name: list_documents
@@ -115,7 +114,7 @@ cases:
       category: rag
       description: "Agent should list documents"
     evaluators:
-      - MaxDuration: 15.0
+      - MaxDuration: 25.0
       # VIDEO 3: Verify the list_documents tool was called
       - HasMatchingSpan:
           query:

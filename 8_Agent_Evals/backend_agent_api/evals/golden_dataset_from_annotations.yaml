@@ -1,0 +1,77 @@
+cases:
+- name: annotated_019b32e0
+  inputs:
+    query: What is NeuroVerse Studios' policy on employee stock options and equity
+      compensation?
+  metadata:
+    source: expert_annotation
+    expert_accuracy: 5.0
+    trace_id: 019b32e0280f3883c1b03250c7d15cc4
+  evaluators:
+    - Contains:
+        value: "document"
+        case_sensitive: false
+    # VIDEO 3: Verify the RAG tool was actually called
+    # Note: Tool name is in gen_ai.tool.name attribute, not span name
+    - HasMatchingSpan:
+        query:
+          has_attributes:
+            gen_ai.tool.name: "retrieve_relevant_documents"
+        evaluation_name: "called_retrieve_documents"
+    # VIDEO 4: RAG quality assessment
+    - LLMJudge:
+        rubric: |
+          Response should:
+          1. Indicate what documents were found
+          2. Provide relevant summaries
+          3. Not make claims beyond retrieved content
+        include_input: true    
+- name: annotated_019b32df
+  inputs:
+    query: What documents do you have available in your knowledge base about NeuroVerse?
+  metadata:
+    source: expert_annotation
+    expert_accuracy: 5.0
+    trace_id: 019b32dff6218f62e8f4be1a3bddc2a8
+- name: annotated_019b32df
+  inputs:
+    query: No search for 2025
+  metadata:
+    source: expert_annotation
+    expert_accuracy: 5.0
+    trace_id: 019b32dfad2890026f7ac76f6757a2de
+- name: annotated_019b32de
+  inputs:
+    query: What are the latest VR headset announcements from Meta or Apple in 2025?
+  metadata:
+    source: expert_annotation
+    expert_accuracy: 5.0
+    trace_id: 019b32def65d283b52de5e789801e09d
+- name: annotated_019b2988
+  inputs:
+    query: What documents do you have available in your knowledge base about NeuroVerse?
+  metadata:
+    source: expert_annotation
+    expert_accuracy: 5.0
+    trace_id: 019b29880d4d143403c1507e0aff5db1
+- name: annotated_019b2987
+  inputs:
+    query: Search the web
+  metadata:
+    source: expert_annotation
+    expert_accuracy: 5.0
+    trace_id: 019b2987a5bbb6f91a13f87ddc483ffe
+- name: annotated_019b2987
+  inputs:
+    query: What are your sources?
+  metadata:
+    source: expert_annotation
+    expert_accuracy: 5.0
+    trace_id: 019b298746fef04646a4089764c17e8c
+- name: annotated_019b2981
+  inputs:
+    query: How much funding has NeuroVerse Studios raised and who led the investment?
+  metadata:
+    source: expert_annotation
+    expert_accuracy: 5.0
+    trace_id: 019b2981abfa3677cd11d20981111456

@@ -22,6 +22,7 @@ Usage:
 import json
 import os
 import sys
+import time
 from pathlib import Path
 from typing import Optional
 
@@ -34,6 +35,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 # Load environment variables
 env_path = Path(__file__).parent.parent.parent / ".env"
 load_dotenv(env_path, override=True)
+
+
+# In-memory cache for score data to avoid duplicate API calls
+# Maps score_id -> {"name": str, "value": any, "id": str}
+_score_cache: dict[str, dict] = {}
 
 
 def get_langfuse_client():
@@ -65,6 +71,8 @@ def _fetch_scores_for_trace(langfuse, score_ids: list[str]) -> list[dict]:
     In Langfuse SDK v3, trace.scores is a list of score IDs (strings),
     not score objects. This helper fetches the actual score details.
 
+    Uses an in-memory cache to avoid duplicate API calls for the same score ID.
+
     Args:
         langfuse: Langfuse client
         score_ids: List of score ID strings
@@ -74,15 +82,29 @@ def _fetch_scores_for_trace(langfuse, score_ids: list[str]) -> list[dict]:
     """
     scores = []
     for score_id in score_ids:
+        # Check cache first
+        if score_id in _score_cache:
+            scores.append(_score_cache[score_id])
+            continue
+
         try:
             # Use score_v_2.get to fetch individual score by ID
-            score = langfuse.api.score_v_2.get(score_id)
-            scores.append({
+            score = langfuse.api.score_v_2.get(score_ids=score_id).data[0]
+
+            # Sleep to avoid rate limits
+            time.sleep(5)
+
+            score_data = {
                 "name": score.name,
                 "value": score.value,
                 "id": score.id
-            })
-        except Exception:
+            }
+
+            # Store in cache for future lookups
+            _score_cache[score_id] = score_data
+            scores.append(score_data)
+        except Exception as e:
+            print(e)
             # Skip scores that can't be fetched
             continue
     return scores

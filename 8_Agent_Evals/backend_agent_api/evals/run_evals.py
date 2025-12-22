@@ -158,7 +158,7 @@ async def run_dataset(dataset_path: Path, dataset_name: str) -> tuple[int, int, 
     report = await dataset.evaluate(run_agent)
 
     # Print detailed report
-    report.print(include_input=True, include_output=True)
+    report.print(include_input=True, include_output=True, include_reasons=True)
 
     # Calculate results
     def case_passed(case) -> bool:
