@@ -6,12 +6,12 @@ CREATE TABLE IF NOT EXISTS documents (
   id bigserial primary key,
   content text, -- corresponds to Document.pageContent
   metadata jsonb, -- corresponds to Document.metadata
-  embedding vector(1536) -- 1536 works for OpenAI embeddings, change if needed like 768 for nomic-embed-text (Ollama)
+  embedding vector(768) -- 1536 works for OpenAI embeddings, change if needed like 768 for nomic-embed-text (Ollama)
 );
 
 -- Create a function to search for documents
 CREATE OR REPLACE FUNCTION match_documents (
-  query_embedding vector(1536), -- 1536 works for OpenAI embeddings, change if needed like 768 for nomic-embed-text (Ollama)
+  query_embedding vector(768), -- 1536 works for OpenAI embeddings, change if needed like 768 for nomic-embed-text (Ollama)
   match_count int default null,
   filter jsonb DEFAULT '{}'
 ) returns table (
