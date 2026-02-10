@@ -30,29 +30,27 @@ export const ConversationDialog = ({
             {selectedConversation?.title || 'Conversation Details'}
           </DialogTitle>
         </DialogHeader>
-        
+
         {loadingMessages ? (
           <div className="py-8 flex justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+            <Loader2 className="h-8 w-8 animate-spin text-[#cc8c0f]" />
           </div>
         ) : (
           <div className="space-y-6 mt-4">
             {selectedConversation?.messages?.length ? (
               selectedConversation.messages.map((message, index) => (
-                <div 
-                  key={message.id || index} 
-                  className={`flex items-start gap-3 ${
-                    message.message.type === 'human' 
-                      ? 'justify-end' 
+                <div
+                  key={message.id || index}
+                  className={`flex items-start gap-3 ${message.message.type === 'human'
+                      ? 'justify-end'
                       : 'justify-start'
-                  }`}
-                >
-                  <div 
-                    className={`rounded-lg px-4 py-3 max-w-[80%] ${
-                      message.message.type === 'human' 
-                        ? 'bg-gray-700 text-gray-50' 
-                        : 'bg-gray-800 text-gray-50'
                     }`}
+                >
+                  <div
+                    className={`rounded-lg px-4 py-3 max-w-[80%] ${message.message.type === 'human'
+                        ? 'bg-gray-700 text-gray-50'
+                        : 'bg-gray-800 text-gray-50'
+                      }`}
                   >
                     <div className="text-xs text-gray-400 mb-1">
                       {message.message.type === 'human' ? 'User' : 'AI'}

@@ -40,7 +40,7 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   const isMobile = useIsMobile();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [isGeneratingResponse, setIsGeneratingResponse] = useState(false);
-  
+
   // Track when a response is being generated vs. just loading messages
   React.useEffect(() => {
     // Only set isGeneratingResponse to true when loading is true AND we have messages
@@ -51,7 +51,7 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
       setIsGeneratingResponse(false);
     }
   }, [loading, messages.length]);
-  
+
   // Wrapper for mobile conversation selection that also closes the sheet
   const handleSelectConversation = (conversation: Conversation) => {
     onSelectConversation(conversation);
@@ -59,7 +59,7 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
       setSheetOpen(false);
     }
   };
-  
+
   // Wrapper for new chat that also closes the sheet on mobile
   const handleNewChat = () => {
     onNewChat();
@@ -76,7 +76,7 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
       onToggleSidebar();
     }
   };
-  
+
   const renderSidebar = () => (
     <ChatSidebar
       conversations={conversations}
@@ -99,23 +99,23 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-        
+
         <div className="flex-1 overflow-hidden relative">
-          <MessageList 
-            messages={messages} 
-            isLoading={loading} 
-            isGeneratingResponse={isGeneratingResponse} 
+          <MessageList
+            messages={messages}
+            isLoading={loading}
+            isGeneratingResponse={isGeneratingResponse}
           />
         </div>
-        
+
         <div className="border-t">
           <div className="p-4 max-w-4xl mx-auto w-full">
-            <ChatInput 
-              onSendMessage={onSendMessage} 
+            <ChatInput
+              onSendMessage={onSendMessage}
               isLoading={loading}
             />
             <div className="mt-2 text-xs text-center text-muted-foreground">
-              AI responses are generated based on your input. The AI agent may produce inaccurate information.
+              Brought to you by <a href="https://www.linkedin.com/in/jayden-finaughty-7931b51a7/" target="_blank" rel="noopener noreferrer" className="text-[#cc8c0f] hover:text-[#e0a020] hover:underline">GroundUp Labs</a>
             </div>
           </div>
         </div>

@@ -70,10 +70,10 @@ export const ChatSidebar = ({
           <Menu className="h-5 w-5" />
         </Button>
         {isAdmin && (
-          <Button 
-            variant="outline" 
-            size="icon" 
-            className="mb-2 text-blue-500 border-blue-500"
+          <Button
+            variant="outline"
+            size="icon"
+            className="mb-2 text-[#cc8c0f] border-[#cc8c0f]"
             asChild
           >
             <Link to="/admin">
@@ -96,22 +96,21 @@ export const ChatSidebar = ({
     <div className="bg-sidebar h-full w-72 border-r flex flex-col">
       <div className="flex items-center justify-between p-4">
         <div className="text-sidebar-foreground font-semibold flex items-center">
-          <MessageSquare className="mr-2 h-5 w-5" />
-          AI Chat
+          <img src="/sweat-logo.png" alt="SWEAT" className="h-8 w-auto" />
         </div>
         <Button variant="ghost" size="icon" onClick={onToggleSidebar}>
           <ChevronLeft className="h-5 w-5" />
         </Button>
       </div>
-      
+
       <Separator />
-      
+
       <div className="px-4 pt-4">
         {isAdmin && (
           <div className="mb-3">
-            <Button 
+            <Button
               variant="outline"
-              className="w-full justify-start bg-blue-500 text-white hover:bg-blue-600"
+              className="w-full justify-start bg-[#cc8c0f] text-white hover:bg-[#b07a0d]"
               asChild
             >
               <Link to="/admin">
@@ -121,16 +120,16 @@ export const ChatSidebar = ({
             </Button>
           </div>
         )}
-      
-        <Button 
-          onClick={onNewChat} 
-          className="w-full justify-start bg-blue-500 text-white hover:bg-blue-600"
+
+        <Button
+          onClick={onNewChat}
+          className="w-full justify-start bg-[#cc8c0f] text-white hover:bg-[#b07a0d]"
         >
           <Plus className="mr-2 h-5 w-5" />
           New Chat
         </Button>
       </div>
-      
+
       <div className="px-4 pt-4 pb-2">
         <div className="relative">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -143,7 +142,7 @@ export const ChatSidebar = ({
           />
         </div>
       </div>
-      
+
       <ScrollArea className="flex-1 px-2">
         <div className="space-y-1 p-2">
           {filteredConversations.length > 0 ? (
@@ -160,9 +159,9 @@ export const ChatSidebar = ({
               >
                 <MessageSquare className="mr-2 h-4 w-4" />
                 {newConversationId === conversation.session_id ? (
-                  <TypewriterText 
-                    text={conversation.title || ''} 
-                    duration={300} 
+                  <TypewriterText
+                    text={conversation.title || ''}
+                    duration={300}
                     className="truncate"
                   />
                 ) : (
@@ -177,9 +176,9 @@ export const ChatSidebar = ({
           )}
         </div>
       </ScrollArea>
-      
+
       <Separator />
-      
+
       <div className="p-4">
         <div className="flex items-center gap-2">
           <Avatar className="h-8 w-8">
@@ -195,8 +194,8 @@ export const ChatSidebar = ({
               {user?.user_metadata?.full_name || user?.email || 'User'}
             </div>
           </div>
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             size="icon"
             onClick={() => setIsSettingsOpen(true)}
           >
@@ -207,9 +206,9 @@ export const ChatSidebar = ({
           </Button>
         </div>
       </div>
-      
+
       {/* Settings Modal */}
-      <SettingsModal 
+      <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         currentFullName={user?.user_metadata?.full_name || null}

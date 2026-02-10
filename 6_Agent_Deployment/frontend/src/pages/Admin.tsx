@@ -46,33 +46,33 @@ export const Admin = () => {
       </div>
       <div className="flex-1 overflow-auto p-4">
         <div className="flex justify-center mb-6">
-          <Tabs 
-            defaultValue="users" 
-            value={activeTab} 
+          <Tabs
+            defaultValue="users"
+            value={activeTab}
             onValueChange={setActiveTab}
             className="w-full max-w-[95%] lg:max-w-[1200px]"
           >
             <div className="flex justify-center mb-6">
               <TabsList className="grid w-[400px] grid-cols-2 bg-gray-100 dark:bg-gray-800">
-                <TabsTrigger 
-                  value="users" 
-                  className="transition-all data-[state=active]:bg-blue-500 data-[state=active]:text-white"
+                <TabsTrigger
+                  value="users"
+                  className="transition-all data-[state=active]:bg-[#cc8c0f] data-[state=active]:text-white"
                 >
                   Users
                 </TabsTrigger>
-                <TabsTrigger 
-                  value="conversations" 
-                  className="transition-all data-[state=active]:bg-blue-500 data-[state=active]:text-white"
+                <TabsTrigger
+                  value="conversations"
+                  className="transition-all data-[state=active]:bg-[#cc8c0f] data-[state=active]:text-white"
                 >
                   Conversations
                 </TabsTrigger>
               </TabsList>
             </div>
-            
+
             <TabsContent value="users" className="mt-0">
               <UsersTable />
             </TabsContent>
-            
+
             <TabsContent value="conversations" className="mt-0">
               <div className="p-4">
                 <h2 className="text-2xl font-semibold mb-4">Conversation Management</h2>

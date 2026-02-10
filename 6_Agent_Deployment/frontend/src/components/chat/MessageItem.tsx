@@ -18,7 +18,7 @@ interface MessageItemProps {
 }
 
 interface CodeProps {
-  node?: Element;
+  node?: any;
   inline?: boolean;
   className?: string;
   children: React.ReactNode;
@@ -42,12 +42,12 @@ export const MessageItem = ({ message, isLastMessage = false }: MessageItemProps
     if (!message.message.content) return '';
     return message.message.content;
   }, [message.message.content]);
-  
+
   // Check if the message has file attachments
   const hasFiles = useMemo(() => {
     return message.message.files && message.message.files.length > 0;
   }, [message.message.files]);
-  
+
   // Function to download a file
   const downloadFile = (file: FileAttachment) => {
     // Convert base64 to blob
@@ -58,7 +58,7 @@ export const MessageItem = ({ message, isLastMessage = false }: MessageItemProps
     }
     const byteArray = new Uint8Array(byteNumbers);
     const blob = new Blob([byteArray], { type: file.mimeType });
-    
+
     // Create download link
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -69,7 +69,7 @@ export const MessageItem = ({ message, isLastMessage = false }: MessageItemProps
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
-  
+
   // Memoize the markdown content to prevent unnecessary re-renders
   // This is especially important for the first AI response
   const memoizedMarkdown = useMemo(() => {
@@ -79,20 +79,13 @@ export const MessageItem = ({ message, isLastMessage = false }: MessageItemProps
         rehypePlugins={[rehypeRaw]} // Allow HTML in markdown
         components={{
           // Add proper paragraph handling with increased spacing
-          p: ({children}) => <p className="mb-4 last:mb-0">{children}</p>,
-          // Handle headers with proper spacing
-          h1: ({children}) => <h1 className="text-2xl font-bold mt-6 mb-4 first:mt-0">{children}</h1>,
-          h2: ({children}) => <h2 className="text-xl font-bold mt-5 mb-3 first:mt-0">{children}</h2>,
-          h3: ({children}) => <h3 className="text-lg font-bold mt-4 mb-2 first:mt-0">{children}</h3>,
-          h4: ({children}) => <h4 className="text-base font-bold mt-3 mb-2 first:mt-0">{children}</h4>,
-          h5: ({children}) => <h5 className="text-sm font-bold mt-3 mb-2 first:mt-0">{children}</h5>,
-          h6: ({children}) => <h6 className="text-sm font-bold mt-3 mb-2 first:mt-0">{children}</h6>,
+          p: ({ children }) => <p className="mb-6 last:mb-0">{children}</p>,
           // Ensure proper link styling with a distinct color
-          a: ({href, children}) => <a href={href} className="text-blue-400 hover:text-blue-500 hover:underline" target="_blank" rel="noopener noreferrer">{children}</a>,
+          a: ({ href, children }) => <a href={href} className="text-[#cc8c0f] hover:text-[#e0a020] hover:underline" target="_blank" rel="noopener noreferrer">{children}</a>,
           // Ensure proper line break handling
           br: () => <br className="mb-2" />,
           // Handle code blocks with syntax highlighting
-          code({node, inline, className, children, ...props}: CodeProps) {
+          code({ node, inline, className, children, ...props }: CodeProps) {
             const match = /language-(\w+)/.exec(className || '');
             return !inline && match ? (
               <SyntaxHighlighter
@@ -118,7 +111,7 @@ export const MessageItem = ({ message, isLastMessage = false }: MessageItemProps
   }, [processedContent]);
 
   return (
-    <div 
+    <div
       className={cn(
         "flex w-full",
         isLastMessage && isAI && "animate-fade-in"
@@ -134,7 +127,7 @@ export const MessageItem = ({ message, isLastMessage = false }: MessageItemProps
             AI
           </div>
         )}
-        
+
         <div className={cn(
           "flex flex-col space-y-1",
           "max-w-[calc(100%-64px)]",
@@ -142,19 +135,19 @@ export const MessageItem = ({ message, isLastMessage = false }: MessageItemProps
           <div className="text-xs font-medium text-muted-foreground">
             {isUser ? 'You' : 'AI Assistant'}
           </div>
-          
+
           <div className={cn(
             "rounded-lg px-4 py-3 break-words",
             "overflow-x-auto", // Add horizontal scrolling for code blocks if needed
-            isUser ? "bg-chat-user text-white" : "bg-chat-assistant text-foreground"
+            isUser ? "bg-chat-user text-white" : "bg-transparent text-foreground"
           )}>
             {/* File attachments */}
             {hasFiles && (
               <div className="mb-3 flex flex-wrap gap-2">
                 {message.message.files?.map((file, index) => (
-                  <Badge 
-                    key={index} 
-                    variant="outline" 
+                  <Badge
+                    key={index}
+                    variant="outline"
                     className="flex items-center gap-1 py-1 cursor-pointer hover:bg-secondary"
                     onClick={() => downloadFile(file)}
                   >
@@ -169,12 +162,12 @@ export const MessageItem = ({ message, isLastMessage = false }: MessageItemProps
               {memoizedMarkdown}
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2">
             <div className="text-xs text-muted-foreground">
               {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </div>
-            
+
             {!isUser && (
               <Button
                 variant="ghost"
@@ -192,7 +185,7 @@ export const MessageItem = ({ message, isLastMessage = false }: MessageItemProps
             )}
           </div>
         </div>
-        
+
         {isUser && (
           <Avatar className="h-8 w-8 bg-secondary text-secondary-foreground shrink-0 mt-1">
             <AvatarFallback>
