@@ -10,6 +10,7 @@ import Chat from "./pages/Chat";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 import { AuthCallback } from "./components/auth/AuthCallback";
+import { PopiaConsent } from "./components/PopiaConsent";
 import { ThemeProvider } from "@/components/theme-provider";
 import { useEffect } from "react";
 
@@ -18,7 +19,7 @@ const queryClient = new QueryClient();
 // Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
-  
+
   // Show loading state
   if (loading) {
     return (
@@ -27,39 +28,39 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       </div>
     );
   }
-  
+
   // Redirect to login if not authenticated
   if (!user) {
     return <Navigate to="/login" />;
   }
-  
-  return <>{children}</>;
+
+  return <PopiaConsent>{children}</PopiaConsent>;
 };
 
 const AppRoutes = () => {
   const { user } = useAuth();
-  
+
   return (
     <Routes>
-      <Route 
-        path="/login" 
-        element={user ? <Navigate to="/" /> : <Login />} 
+      <Route
+        path="/login"
+        element={user ? <Navigate to="/" /> : <Login />}
       />
-      <Route 
-        path="/" 
+      <Route
+        path="/"
         element={
           <ProtectedRoute>
             <Chat />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/admin" 
+      <Route
+        path="/admin"
         element={
           <ProtectedRoute>
             <Admin />
           </ProtectedRoute>
-        } 
+        }
       />
       {/* OAuth callback route for handling authentication redirects */}
       <Route path="/auth/callback" element={<AuthCallback />} />
